@@ -48,7 +48,12 @@ func (c *Client) QueryRange(ctx context.Context, q string, r v1.Range) (model.Va
 }
 
 // QueryScalar runs an instant query expected to reduce to a single value
-// (a scalar or a one-element vector). Empty vector is treated as 0.
+// (a scalar or a one-element vector). An empty vector and a NaN/Inf result
+// are both treated as 0: histogram_quantile over empty buckets yields NaN,
+// JSON can't marshal NaN/Inf, and letting it through produces a 200 with a
+// truncated body (the exact failure writeJSON guards against). The 0 is a
+// display fallback, not a measured value — the same convention the other
+// query helpers use for missing samples.
 func (c *Client) QueryScalar(ctx context.Context, q string, t time.Time) (float64, error) {
 	v, err := c.Query(ctx, q, t)
 	if err != nil {
@@ -56,15 +61,23 @@ func (c *Client) QueryScalar(ctx context.Context, q string, t time.Time) (float6
 	}
 	switch vv := v.(type) {
 	case *model.Scalar:
-		return float64(vv.Value), nil
+		return jsonSafe(float64(vv.Value)), nil
 	case model.Vector:
 		if len(vv) == 0 {
 			return 0, nil
 		}
-		return float64(vv[0].Value), nil
+		return jsonSafe(float64(vv[0].Value)), nil
 	default:
 		return 0, fmt.Errorf("promclient: unexpected scalar result type %T", v)
 	}
+}
+
+// jsonSafe maps NaN/Inf to 0 so the value can be JSON-marshalled.
+func jsonSafe(f float64) float64 {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0
+	}
+	return f
 }
 
 // LabelledSample is a single sample from a Prometheus vector result with all
