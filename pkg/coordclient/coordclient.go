@@ -1,7 +1,12 @@
-// Package coordclient wraps the leader-only admin RPCs on BigFleet's
-// Coordinator service (ADR-0008): ListShards, ListDomainAssignments,
-// ListQuotas. The dashboard never calls mutating RPCs — those stay in
-// bigfleetctl.
+// Package coordclient wraps the leader-only READ RPCs on BigFleet's
+// Coordinator service: ListShards, ListDomainAssignments, ListQuotas.
+// The dashboard never calls mutating RPCs — those stay in bigfleetctl.
+//
+// Under ADR-0048 the coordinator may require mTLS; under ADR-0060 these
+// read RPCs accept a bigfleet://readonly (or bigfleet://admin) client
+// certificate. The dashboard should present a bigfleet://readonly cert so
+// it physically cannot mutate the fleet. With no TLS flags set the client
+// dials plaintext (the coordinator's trust-the-network default).
 package coordclient
 
 import (
@@ -11,9 +16,9 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
+	"github.com/intUnderflow/bigfleet/pkg/grpcutil"
 	coordpb "github.com/intUnderflow/bigfleet/pkg/proto/bigfleet/v1alpha1"
 )
 
@@ -28,12 +33,21 @@ type Client struct {
 	api  coordpb.CoordinatorClient
 }
 
-func New(addr string) (*Client, error) {
+// New dials the coordinator at addr using the given TLS config (ADR-0048).
+// A zero TLSConfig dials plaintext; a full one presents the dashboard's
+// client certificate — which should carry the bigfleet://readonly URI SAN
+// (ADR-0060). An empty addr yields an unconfigured client whose read
+// methods return ErrNotConfigured.
+func New(addr string, tlsCfg grpcutil.TLSConfig) (*Client, error) {
 	c := &Client{addr: addr}
 	if addr == "" {
 		return c, nil
 	}
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	dialOpts, err := tlsCfg.DialOptions()
+	if err != nil {
+		return nil, fmt.Errorf("coordinator dial options: %w", err)
+	}
+	conn, err := grpc.NewClient(addr, dialOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("dial coordinator: %w", err)
 	}
@@ -53,9 +67,9 @@ func (c *Client) Close() error {
 }
 
 type ShardRegistryEntry struct {
-	ShardID            string
-	Address            string
-	RegisteredAtUnixNs int64
+	ShardID             string
+	Address             string
+	RegisteredAtUnixNs  int64
 	LastHeartbeatUnixNs int64
 }
 

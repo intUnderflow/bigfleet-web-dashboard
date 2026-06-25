@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/intUnderflow/bigfleet/pkg/grpcutil"
+
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/coordclient"
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/kubeclient"
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/promclient"
@@ -37,7 +39,11 @@ type Config struct {
 	CoordinatorAddr string
 	Kubeconfig      string
 	GrafanaURL      string
-	Logger          *slog.Logger
+	// TLS is the ADR-0048 client TLS config used to dial the coordinator.
+	// Zero value = plaintext; a full set presents the dashboard's
+	// bigfleet://readonly certificate (ADR-0060).
+	TLS    grpcutil.TLSConfig
+	Logger *slog.Logger
 }
 
 type Server struct {
@@ -61,7 +67,7 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	coord, err := coordclient.New(cfg.CoordinatorAddr)
+	coord, err := coordclient.New(cfg.CoordinatorAddr, cfg.TLS)
 	if err != nil {
 		return nil, err
 	}

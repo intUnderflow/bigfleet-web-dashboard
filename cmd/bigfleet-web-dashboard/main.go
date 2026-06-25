@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/intUnderflow/bigfleet/pkg/grpcutil"
+
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/server"
 )
 
@@ -19,6 +21,11 @@ func main() {
 		kubeconfig = flag.String("kubeconfig", "", "path to kubeconfig for managed clusters")
 		grafanaURL = flag.String("grafana-url", "", "Grafana base URL used by embedded-panel iframes")
 	)
+	// ADR-0048 mTLS flags used to dial the coordinator. Set all three to
+	// present the dashboard's bigfleet://readonly certificate (ADR-0060);
+	// leave them unset to dial plaintext.
+	var tlsCfg grpcutil.TLSConfig
+	tlsCfg.RegisterFlags(flag.CommandLine)
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -29,6 +36,7 @@ func main() {
 		CoordinatorAddr: *coordAddr,
 		Kubeconfig:      *kubeconfig,
 		GrafanaURL:      *grafanaURL,
+		TLS:             tlsCfg,
 		Logger:          logger,
 	})
 	if err != nil {
