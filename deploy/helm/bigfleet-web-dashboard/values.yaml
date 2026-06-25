@@ -15,10 +15,36 @@ prometheusUrl: ""
 coordinatorAddr: ""
 grafanaUrl: ""
 
+# mTLS for dialing the coordinator (ADR-0048 / ADR-0060). Mount a Secret
+# holding the dashboard's client certificate — which should carry the
+# bigfleet://readonly URI SAN so it can read but never mutate the fleet — its
+# private key, and the CA bundle, then set the filenames below. Leave
+# secretName empty to dial the coordinator in plaintext (dev / zero-config).
+coordinatorTLS:
+  secretName: ""
+  mountPath: "/etc/bigfleet-web-dashboard/tls"
+  certFile: "tls.crt"
+  keyFile: "tls.key"
+  caFile: "ca.crt"
+
 # Kubeconfig for managed clusters. Mount a Secret as a file and set the path here.
 kubeconfig:
   secretName: ""
   path: "/etc/bigfleet-web-dashboard/kubeconfig"
+
+# The image runs as nonroot (uid 65532, distroless static). The dashboard
+# writes nothing to disk — the SPA is embedded — so the root filesystem is
+# read-only.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
 
 resources:
   requests:

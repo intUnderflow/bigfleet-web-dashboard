@@ -15,10 +15,18 @@ spec:
         {{- include "bigfleet-web-dashboard.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "bigfleet-web-dashboard.fullname" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: bigfleet-web-dashboard
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           args:
             - --listen=:8080
             {{- with .Values.prometheusUrl }}
@@ -26,6 +34,11 @@ spec:
             {{- end }}
             {{- with .Values.coordinatorAddr }}
             - --coordinator-addr={{ . }}
+            {{- end }}
+            {{- if .Values.coordinatorTLS.secretName }}
+            - --tls-cert={{ .Values.coordinatorTLS.mountPath }}/{{ .Values.coordinatorTLS.certFile }}
+            - --tls-key={{ .Values.coordinatorTLS.mountPath }}/{{ .Values.coordinatorTLS.keyFile }}
+            - --tls-ca={{ .Values.coordinatorTLS.mountPath }}/{{ .Values.coordinatorTLS.caFile }}
             {{- end }}
             {{- with .Values.grafanaUrl }}
             - --grafana-url={{ . }}
@@ -49,15 +62,29 @@ spec:
             periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.kubeconfig.secretName }}
+          {{- if or .Values.kubeconfig.secretName .Values.coordinatorTLS.secretName }}
           volumeMounts:
+            {{- if .Values.kubeconfig.secretName }}
             - name: kubeconfig
               mountPath: {{ dir .Values.kubeconfig.path }}
               readOnly: true
+            {{- end }}
+            {{- if .Values.coordinatorTLS.secretName }}
+            - name: coordinator-tls
+              mountPath: {{ .Values.coordinatorTLS.mountPath }}
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if .Values.kubeconfig.secretName }}
+      {{- if or .Values.kubeconfig.secretName .Values.coordinatorTLS.secretName }}
       volumes:
+        {{- if .Values.kubeconfig.secretName }}
         - name: kubeconfig
           secret:
             secretName: {{ .Values.kubeconfig.secretName }}
+        {{- end }}
+        {{- if .Values.coordinatorTLS.secretName }}
+        - name: coordinator-tls
+          secret:
+            secretName: {{ .Values.coordinatorTLS.secretName }}
+        {{- end }}
       {{- end }}

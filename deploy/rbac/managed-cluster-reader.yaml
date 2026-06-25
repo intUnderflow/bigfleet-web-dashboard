@@ -1,0 +1,32 @@
+# Read-only RBAC for the dashboard's access to a MANAGED cluster's
+# bigfleet.lucy.sh CRDs. Apply this in each managed cluster and bind it to
+# the identity the dashboard's kubeconfig context authenticates as. This is
+# the dashboard's read-only posture made concrete: list/watch on the two CRDs
+# it reads, nothing else, no write verbs.
+#
+# This is NOT part of the install Helm chart — the dashboard reads managed
+# clusters over their apiservers (via --kubeconfig), not via its own
+# in-cluster ServiceAccount, which needs no RBAC where the dashboard runs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bigfleet-web-dashboard-reader
+rules:
+  - apiGroups: ["bigfleet.lucy.sh"]
+    resources: ["capacityrequests", "upcomingnodes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bigfleet-web-dashboard-reader
+roleRef:
+  kind: ClusterRole
+  name: bigfleet-web-dashboard-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  # Replace with the identity your kubeconfig context authenticates as in
+  # this managed cluster (a ServiceAccount, a user, or a group).
+  - kind: ServiceAccount
+    name: bigfleet-web-dashboard
+    namespace: bigfleet-system
