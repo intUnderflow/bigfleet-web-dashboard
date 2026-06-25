@@ -44,7 +44,7 @@ jobs:
         run: go test -race ./...
 
   ui:
-    name: ui typecheck + build
+    name: ui lint + typecheck + test + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +56,11 @@ jobs:
       - working-directory: ui
         run: npm ci || npm install
       - working-directory: ui
+        run: npm run lint
+      - working-directory: ui
         run: npm run typecheck
+      - working-directory: ui
+        run: npm run test
       - working-directory: ui
         run: npm run build
 
