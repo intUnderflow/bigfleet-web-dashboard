@@ -141,6 +141,17 @@ export interface ShardDetail {
   queriedAt: string;
 }
 
+export interface Provider {
+  name: string;
+  address: string;
+  region: string;
+}
+
+export interface ProvidersListResponse {
+  providers: Provider[];
+  queriedAt: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -173,5 +184,6 @@ export const api = {
   clusters: () => getJSON<ClustersListResponse>("/api/clusters"),
   cluster: (id: string) => getJSON<ClusterDetail>(`/api/clusters/${encodeURIComponent(id)}`),
   topology: () => getJSON<Topology>("/api/topology"),
+  providers: () => getJSON<ProvidersListResponse>("/api/providers"),
   finopsSnapshot: () => getJSON<FinOpsSnapshot>("/api/finops/snapshot"),
 };

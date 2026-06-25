@@ -1,6 +1,7 @@
 // Package coordclient wraps the leader-only READ RPCs on BigFleet's
-// Coordinator service: ListShards, ListDomainAssignments, ListQuotas.
-// The dashboard never calls mutating RPCs — those stay in bigfleetctl.
+// Coordinator service: ListShards, ListDomainAssignments, ListQuotas,
+// ListProviders, ListShardReports. The dashboard never calls mutating
+// RPCs — those stay in bigfleetctl.
 //
 // Under ADR-0048 the coordinator may require mTLS; under ADR-0060 these
 // read RPCs accept a bigfleet://readonly (or bigfleet://admin) client
@@ -139,6 +140,104 @@ func (c *Client) ListQuotas(ctx context.Context) ([]QuotaAllocation, error) {
 			Region:   q.GetRegion(),
 			PerShard: q.GetPerShard(),
 		})
+	}
+	return out, nil
+}
+
+// Provider is a registered provider backend (ADR-0060 ListProviders).
+type Provider struct {
+	Name    string
+	Address string
+	Region  string
+}
+
+// ListProviders returns the provider backends the coordinator has registered.
+func (c *Client) ListProviders(ctx context.Context) ([]Provider, error) {
+	if c.api == nil {
+		return nil, ErrNotConfigured
+	}
+	resp, err := c.api.ListProviders(ctx, &coordpb.ListProvidersRequest{})
+	if err != nil {
+		return nil, mapLeaderErr(err)
+	}
+	out := make([]Provider, 0, len(resp.GetProviders()))
+	for _, p := range resp.GetProviders() {
+		out = append(out, Provider{
+			Name:    p.GetName(),
+			Address: p.GetAddress(),
+			Region:  p.GetRegion(),
+		})
+	}
+	return out, nil
+}
+
+// ShardReportSummary is the inventory headline from a shard's last report.
+type ShardReportSummary struct {
+	TotalMachines      int32
+	FreeMachines       int32
+	InstanceTypeCounts map[string]int32
+	ZoneCounts         map[string]int32
+}
+
+// ShardReportShortfall is one unsatisfied need the shard reported. The
+// coordinator's soft state does not retain the original requirements
+// (ADR-0060) — only the fields below.
+type ShardReportShortfall struct {
+	Priority      int32
+	Deficit       map[string]string
+	AgeCycles     int32
+	PenaltyBucket string
+}
+
+// ShardReport is the coordinator's leader-local soft-state snapshot of one
+// shard (ADR-0060 ListShardReports): its latest summary + outstanding
+// shortfalls. Leader-local and stale-on-failover — ReceivedAtUnixNs lets the
+// caller judge freshness; an empty result means "rebuilding after failover",
+// not "zero demand".
+type ShardReport struct {
+	ShardID          string
+	Cycle            int64
+	ReceivedAtUnixNs int64
+	Summary          *ShardReportSummary
+	Shortfalls       []ShardReportShortfall
+}
+
+// ListShardReports returns the coordinator's soft-state snapshot for every
+// shard it currently holds a report for. Pass shardID to restrict to one
+// shard; empty returns all.
+func (c *Client) ListShardReports(ctx context.Context, shardID string) ([]ShardReport, error) {
+	if c.api == nil {
+		return nil, ErrNotConfigured
+	}
+	resp, err := c.api.ListShardReports(ctx, &coordpb.ListShardReportsRequest{ShardId: shardID})
+	if err != nil {
+		return nil, mapLeaderErr(err)
+	}
+	out := make([]ShardReport, 0, len(resp.GetReports()))
+	for _, r := range resp.GetReports() {
+		rep := ShardReport{
+			ShardID:          r.GetShardId(),
+			Cycle:            r.GetCycle(),
+			ReceivedAtUnixNs: r.GetReceivedAtUnixNs(),
+		}
+		if s := r.GetSummary(); s != nil {
+			rep.Summary = &ShardReportSummary{
+				TotalMachines:      s.GetTotalMachines(),
+				FreeMachines:       s.GetFreeMachines(),
+				InstanceTypeCounts: s.GetPerInstanceTypeCounts(),
+				ZoneCounts:         s.GetPerZoneCounts(),
+			}
+		}
+		rep.Shortfalls = make([]ShardReportShortfall, 0, len(r.GetShortfalls()))
+		for _, sf := range r.GetShortfalls() {
+			rep.Shortfalls = append(rep.Shortfalls, ShardReportShortfall{
+				Priority:      sf.GetPriority(),
+				Deficit:       sf.GetDeficit().GetResources(),
+				AgeCycles:     sf.GetAgeCycles(),
+				PenaltyBucket: sf.GetInterruptionPenaltyBucket().String(),
+			})
+		}
+		out = append(out, rep)
 	}
 	return out, nil
 }

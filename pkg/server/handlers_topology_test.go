@@ -17,6 +17,8 @@ type stubCoord struct {
 	shards     []coordclient.ShardRegistryEntry
 	domains    []coordclient.DomainAssignment
 	quotas     []coordclient.QuotaAllocation
+	providers  []coordclient.Provider
+	reports    []coordclient.ShardReport
 	err        error
 }
 
@@ -38,6 +40,18 @@ func (s *stubCoord) ListQuotas(_ context.Context) ([]coordclient.QuotaAllocation
 		return nil, s.err
 	}
 	return s.quotas, nil
+}
+func (s *stubCoord) ListProviders(_ context.Context) ([]coordclient.Provider, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.providers, nil
+}
+func (s *stubCoord) ListShardReports(_ context.Context, _ string) ([]coordclient.ShardReport, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.reports, nil
 }
 
 func TestTopology_CoordUnwired(t *testing.T) {

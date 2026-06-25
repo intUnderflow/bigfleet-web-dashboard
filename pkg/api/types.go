@@ -134,6 +134,52 @@ type ClusterDetail struct {
 	QueriedAt               time.Time      `json:"queriedAt"`
 }
 
+// Provider is a registered provider backend (coordinator ListProviders).
+type Provider struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Region  string `json:"region"`
+}
+
+type ProvidersList struct {
+	Providers []Provider `json:"providers"`
+	QueriedAt time.Time  `json:"queriedAt"`
+}
+
+// ShardReportSummary is the inventory headline from a shard's last report.
+type ShardReportSummary struct {
+	TotalMachines      int            `json:"totalMachines"`
+	FreeMachines       int            `json:"freeMachines"`
+	InstanceTypeCounts map[string]int `json:"instanceTypeCounts"`
+	ZoneCounts         map[string]int `json:"zoneCounts"`
+}
+
+// ShardReportShortfall is one unsatisfied need the shard reported. The
+// coordinator's soft state does not retain the original requirements
+// (ADR-0060), only the fields below.
+type ShardReportShortfall struct {
+	Priority      int               `json:"priority"`
+	Deficit       map[string]string `json:"deficit"`
+	AgeCycles     int               `json:"ageCycles"`
+	PenaltyBucket string            `json:"penaltyBucket"`
+}
+
+// ShardReport is the coordinator's leader-local soft-state snapshot of one
+// shard (coordinator ListShardReports). receivedAtUnixNs lets the UI label
+// freshness; the list is empty right after a failover until shards re-report.
+type ShardReport struct {
+	ShardID          string                 `json:"shardId"`
+	Cycle            int64                  `json:"cycle"`
+	ReceivedAtUnixNs int64                  `json:"receivedAtUnixNs"`
+	Summary          *ShardReportSummary    `json:"summary,omitempty"`
+	Shortfalls       []ShardReportShortfall `json:"shortfalls,omitempty"`
+}
+
+type ShardReportsList struct {
+	Reports   []ShardReport `json:"reports"`
+	QueriedAt time.Time     `json:"queriedAt"`
+}
+
 type ShardDetail struct {
 	Pod                     string             `json:"pod"`
 	CycleP99Seconds         float64            `json:"cycleP99Seconds"`
