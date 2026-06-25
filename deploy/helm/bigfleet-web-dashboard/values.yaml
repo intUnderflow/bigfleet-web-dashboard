@@ -1,0 +1,42 @@
+image:
+  repository: ghcr.io/intunderflow/bigfleet-web-dashboard
+  tag: ""
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# Wiring into a BigFleet install. Each may be left empty to disable that data source;
+# the dashboard surfaces "unwired" indicators in the UI rather than failing to start.
+prometheusUrl: ""
+coordinatorAddr: ""
+grafanaUrl: ""
+
+# Kubeconfig for managed clusters. Mount a Secret as a file and set the path here.
+kubeconfig:
+  secretName: ""
+  path: "/etc/bigfleet-web-dashboard/kubeconfig"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  # - host: bigfleet.example.com
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  tls: []
+  # - secretName: bigfleet-web-dashboard-tls
+  #   hosts: [bigfleet.example.com]

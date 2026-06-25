@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bigfleet-web-dashboard.fullname" . }}
+  labels:
+    {{- include "bigfleet-web-dashboard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "bigfleet-web-dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "bigfleet-web-dashboard.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "bigfleet-web-dashboard.fullname" . }}
+      containers:
+        - name: bigfleet-web-dashboard
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --listen=:8080
+            {{- with .Values.prometheusUrl }}
+            - --prometheus-url={{ . }}
+            {{- end }}
+            {{- with .Values.coordinatorAddr }}
+            - --coordinator-addr={{ . }}
+            {{- end }}
+            {{- with .Values.grafanaUrl }}
+            - --grafana-url={{ . }}
+            {{- end }}
+            {{- if .Values.kubeconfig.secretName }}
+            - --kubeconfig={{ .Values.kubeconfig.path }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.kubeconfig.secretName }}
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: {{ dir .Values.kubeconfig.path }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.kubeconfig.secretName }}
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: {{ .Values.kubeconfig.secretName }}
+      {{- end }}

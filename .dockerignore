@@ -1,0 +1,20 @@
+.git/
+.github/
+bin/
+dist/
+
+# UI build artefacts and deps — Dockerfile rebuilds them fresh.
+ui/node_modules/
+ui/dist/
+
+# SPA bundle is rebuilt by the ui-builder stage and copied in.
+pkg/server/spa/
+
+# Local-only files
+.env
+.env.local
+*.local.yaml
+tmp/
+.idea/
+.vscode/
+.DS_Store

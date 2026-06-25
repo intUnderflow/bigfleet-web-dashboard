@@ -1,0 +1,27 @@
+# Go
+bin/
+dist/
+*.test
+*.out
+coverage.txt
+
+# Node / Vite
+ui/node_modules/
+ui/dist/
+ui/.vite/
+*.tsbuildinfo
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# SPA bundle copied in by `make ui-build` for `make build` to embed
+pkg/server/spa/
+
+# Local dev artefacts
+.env
+.env.local
+*.local.yaml
+tmp/
