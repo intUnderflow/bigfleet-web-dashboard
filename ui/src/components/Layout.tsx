@@ -6,6 +6,7 @@ const navItems = [
   { to: "/shards", label: "Shards" },
   { to: "/clusters", label: "Clusters" },
   { to: "/topology", label: "Topology" },
+  { to: "/needs", label: "Needs" },
   { to: "/providers", label: "Providers" },
   { to: "/finops", label: "FinOps" },
 ];

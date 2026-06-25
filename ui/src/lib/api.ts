@@ -179,6 +179,36 @@ export interface ShardReportsListResponse {
   queriedAt: string;
 }
 
+export interface NeedView {
+  clusterId: string;
+  priority: number;
+  aggregateResources: Record<string, string>;
+  minUnit?: Record<string, string>;
+  group?: string;
+  requirements?: string[];
+  interruptionPenaltyBucket: string;
+  reclamationPenaltyBucket: string;
+  satisfied: boolean;
+  residualDeficit?: Record<string, string>;
+  claimedMachineCount: number;
+  bootstrapCount: number;
+  provisionCount: number;
+  sameDomain?: string;
+  sameSatisfiable: boolean;
+  acquisitionParked: boolean;
+  ageCyclesUnmet: number;
+  unmetReason: string;
+}
+
+export interface NeedsResponse {
+  shardId: string;
+  cycle: number;
+  computedAtUnixNanos: number;
+  totalNeeds: number;
+  needs: NeedView[];
+  queriedAt: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -213,5 +243,9 @@ export const api = {
   topology: () => getJSON<Topology>("/api/topology"),
   providers: () => getJSON<ProvidersListResponse>("/api/providers"),
   shardReports: () => getJSON<ShardReportsListResponse>("/api/shard-reports"),
+  needs: (shard: string, limit = 0) =>
+    getJSON<NeedsResponse>(
+      `/api/needs?shard=${encodeURIComponent(shard)}` + (limit ? `&limit=${limit}` : "")
+    ),
   finopsSnapshot: () => getJSON<FinOpsSnapshot>("/api/finops/snapshot"),
 };

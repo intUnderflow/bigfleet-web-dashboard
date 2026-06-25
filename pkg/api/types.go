@@ -180,6 +180,41 @@ type ShardReportsList struct {
 	QueriedAt time.Time     `json:"queriedAt"`
 }
 
+// NeedView is one Need's last-cycle verdict from a shard's
+// ShardRead.InspectNeeds (ADR-0061).
+type NeedView struct {
+	ClusterID                 string            `json:"clusterId"`
+	Priority                  int               `json:"priority"`
+	AggregateResources        map[string]string `json:"aggregateResources"`
+	MinUnit                   map[string]string `json:"minUnit,omitempty"`
+	Group                     string            `json:"group,omitempty"`
+	Requirements              []string          `json:"requirements,omitempty"`
+	InterruptionPenaltyBucket string            `json:"interruptionPenaltyBucket"`
+	ReclamationPenaltyBucket  string            `json:"reclamationPenaltyBucket"`
+	Satisfied                 bool              `json:"satisfied"`
+	ResidualDeficit           map[string]string `json:"residualDeficit,omitempty"`
+	ClaimedMachineCount       int               `json:"claimedMachineCount"`
+	BootstrapCount            int               `json:"bootstrapCount"`
+	ProvisionCount            int               `json:"provisionCount"`
+	SameDomain                string            `json:"sameDomain,omitempty"`
+	SameSatisfiable           bool              `json:"sameSatisfiable"`
+	AcquisitionParked         bool              `json:"acquisitionParked"`
+	AgeCyclesUnmet            int               `json:"ageCyclesUnmet"`
+	UnmetReason               string            `json:"unmetReason"`
+}
+
+// NeedsResponse is one shard's needs snapshot. cycle 0 with no needs means
+// the shard is rebuilding its ledger (e.g. just after a restart), not "no
+// demand".
+type NeedsResponse struct {
+	ShardID             string     `json:"shardId"`
+	Cycle               int64      `json:"cycle"`
+	ComputedAtUnixNanos int64      `json:"computedAtUnixNanos"`
+	TotalNeeds          int        `json:"totalNeeds"`
+	Needs               []NeedView `json:"needs"`
+	QueriedAt           time.Time  `json:"queriedAt"`
+}
+
 type ShardDetail struct {
 	Pod                     string             `json:"pod"`
 	CycleP99Seconds         float64            `json:"cycleP99Seconds"`

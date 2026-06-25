@@ -20,6 +20,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/topology", s.topologyHandler)
 	s.mux.HandleFunc("GET /api/providers", s.providersHandler)
 	s.mux.HandleFunc("GET /api/shard-reports", s.shardReportsHandler)
+	s.mux.HandleFunc("GET /api/needs", s.needsHandler)
 	s.mux.HandleFunc("GET /api/finops/snapshot", s.finopsHandler)
 	s.mux.Handle("/", s.spaHandler())
 }

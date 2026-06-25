@@ -12,6 +12,7 @@ import (
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/coordclient"
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/kubeclient"
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/promclient"
+	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/shardclient"
 )
 
 // KubeReader is the subset of the kube client the HTTP handlers depend on.
@@ -35,6 +36,13 @@ type CoordReader interface {
 	ListShardReports(ctx context.Context, shardID string) ([]coordclient.ShardReport, error)
 }
 
+// ShardNeedsReader dials a shard's ShardRead.InspectNeeds (ADR-0061). The
+// needs handler discovers shard addresses via CoordReader.ListShards and
+// reads each shard directly. Interface for test substitution.
+type ShardNeedsReader interface {
+	InspectNeeds(ctx context.Context, addr, cluster string, limit int) (shardclient.NeedsSnapshot, error)
+}
+
 type Config struct {
 	Listen          string
 	PrometheusURL   string
@@ -49,12 +57,13 @@ type Config struct {
 }
 
 type Server struct {
-	cfg    Config
-	prom   *promclient.Client
-	coord  CoordReader
-	kube   KubeReader
-	mux    *http.ServeMux
-	server *http.Server
+	cfg        Config
+	prom       *promclient.Client
+	coord      CoordReader
+	kube       KubeReader
+	shardNeeds ShardNeedsReader
+	mux        *http.ServeMux
+	server     *http.Server
 }
 
 func New(cfg Config) (*Server, error) {
@@ -79,11 +88,12 @@ func New(cfg Config) (*Server, error) {
 	}
 
 	s := &Server{
-		cfg:   cfg,
-		prom:  prom,
-		coord: coord,
-		kube:  kube,
-		mux:   http.NewServeMux(),
+		cfg:        cfg,
+		prom:       prom,
+		coord:      coord,
+		kube:       kube,
+		shardNeeds: shardclient.New(cfg.TLS),
+		mux:        http.NewServeMux(),
 	}
 	s.registerRoutes()
 	s.server = &http.Server{
