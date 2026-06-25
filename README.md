@@ -2,11 +2,11 @@
 
 A web dashboard for [BigFleet](https://github.com/intUnderflow/bigfleet) — the fleet-level Kubernetes infrastructure autoscaler.
 
-BigFleet itself ships no in-tree web UI ("`kubectl` + structured logs + Prometheus is the bar," per the main repo's `docs/plan.md` §0). This repo is the consumption layer on top of that contract: a single Go binary that reads BigFleet's Prometheus metrics, calls the coordinator's read-only admin RPCs, and queries the three `bigfleet.lucy.sh/v1alpha1` CRDs across managed clusters — and presents the result as five focused views.
+BigFleet itself ships no in-tree web UI ("`kubectl` + structured logs + Prometheus is the bar," per the main repo's `docs/plan.md` §0). This repo is the consumption layer on top of that contract: a single Go binary that reads BigFleet's Prometheus metrics, calls the coordinator's read-only RPCs (with a `bigfleet://readonly` client certificate — ADR-0048/0060), and queries the `bigfleet.lucy.sh/v1alpha1` CRDs across managed clusters — and presents the result as six focused views.
 
 ## Status
 
-v0 functional surface complete (M0–M5). All five views are wired against real data sources; release tooling lands in M6.
+v0 functional surface complete. All views are wired against real data sources.
 
 | View | Route | Backed by |
 |---|---|---|
@@ -14,7 +14,10 @@ v0 functional surface complete (M0–M5). All five views are wired against real 
 | Shards | `/shards`, `/shards/:pod` | Prometheus per-pod |
 | Clusters | `/clusters`, `/clusters/:id` | Managed-cluster apiservers via `--kubeconfig` |
 | Topology | `/topology` | Coordinator gRPC (`ListShards` / `ListDomainAssignments` / `ListQuotas`) + Prometheus coordinator metrics |
+| Providers | `/providers` | Coordinator gRPC (`ListProviders`) |
 | FinOps | `/finops` | Penalty-bucket × capacity-type heatmap (`docs/user-stories.md` red-flag query) |
+
+The coordinator's leader-local soft-state snapshot is also exposed at `GET /api/shard-reports` (`ListShardReports`: latest `ShardSummary` + outstanding shortfalls per shard); surfacing it in a view is a follow-on.
 
 Every endpoint returns 503 with an actionable message when its data source isn't wired; every endpoint degrades gracefully when wired-but-failing (per-cluster errors surface inline, partial Prometheus data lands in a `warnings[]` field, etc.).
 
@@ -32,6 +35,15 @@ make build                          # builds bin/bigfleet-web-dashboard with UI 
 ```
 
 Open <http://localhost:8080>.
+
+If the coordinator requires mTLS (ADR-0048), add the dashboard's readonly
+certificate (it must carry the `bigfleet://readonly` URI SAN — ADR-0060):
+
+```sh
+  --tls-cert=/path/readonly.crt --tls-key=/path/readonly.key --tls-ca=/path/ca.crt
+```
+
+Omit all three to dial the coordinator in plaintext (the zero-config default).
 
 ### Develop with hot-reload
 
@@ -55,6 +67,7 @@ helm install bigfleet-web-dashboard oci://ghcr.io/intunderflow/charts/bigfleet-w
   --namespace bigfleet-system \
   --set prometheusUrl=http://prometheus:9090 \
   --set coordinatorAddr=bigfleet-coordinator.bigfleet-system:7790 \
+  --set coordinatorTLS.secretName=bigfleet-web-dashboard-tls \
   --set kubeconfig.secretName=bigfleet-web-dashboard-kubeconfig \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
@@ -106,31 +119,18 @@ users:
   user: { token: ... }
 ```
 
-RBAC the dashboard needs in each managed cluster (apply per cluster):
+RBAC the dashboard needs in each managed cluster — a read-only `ClusterRole`
+(`get`/`list`/`watch` on `capacityrequests` and `upcomingnodes`, the two CRDs
+it reads) plus a binding to the identity your kubeconfig context
+authenticates as. Ready to apply:
 
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: bigfleet-web-dashboard-reader
-rules:
-- apiGroups: ["bigfleet.lucy.sh"]
-  resources: ["capacityrequests", "upcomingnodes", "availablecapacities"]
-  verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: bigfleet-web-dashboard-reader
-subjects:
-- kind: ServiceAccount
-  name: bigfleet-web-dashboard
-  namespace: bigfleet-system
-roleRef:
-  kind: ClusterRole
-  name: bigfleet-web-dashboard-reader
-  apiGroup: rbac.authorization.k8s.io
+```sh
+kubectl apply -f deploy/rbac/managed-cluster-reader.yaml   # edit the binding subject first
 ```
+
+This is separate from the install chart: the dashboard reads managed clusters
+over their apiservers (via `--kubeconfig`), not via its own in-cluster
+ServiceAccount, which needs no RBAC where the dashboard runs.
 
 ## Releasing
 
