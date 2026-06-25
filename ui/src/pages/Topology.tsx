@@ -1,20 +1,34 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useConfig } from "../lib/useConfig";
 import { Link } from "react-router-dom";
-import { api, type Topology as TopologyData, type TopologyDomainAssignment } from "../lib/api";
+import {
+  api,
+  type Topology as TopologyData,
+  type TopologyDomainAssignment,
+  type ShardReport,
+} from "../lib/api";
 import { formatInt, formatRate, formatRelative } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 import Tile from "../components/Tile";
+import Card from "../components/Card";
 
 export default function Topology() {
-  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const cfg = useConfig();
   const wired = cfg.data?.coordinatorWired ?? false;
 
   const topology = useQuery({
     queryKey: ["topology"],
     queryFn: api.topology,
+    enabled: wired,
+    refetchInterval: 15_000,
+  });
+
+  const reports = useQuery({
+    queryKey: ["shard-reports"],
+    queryFn: api.shardReports,
     enabled: wired,
     refetchInterval: 15_000,
   });
@@ -34,7 +48,9 @@ export default function Topology() {
         </div>
       )}
 
-      {wired && !topology.error && topology.data && <Body data={topology.data} />}
+      {wired && !topology.error && topology.data && (
+        <Body data={topology.data} reports={reports.data?.reports} />
+      )}
       {wired && !topology.error && !topology.data && (
         <div className="mt-6 text-xs text-neutral-500">Loading…</div>
       )}
@@ -42,7 +58,7 @@ export default function Topology() {
   );
 }
 
-function Body({ data }: { data: TopologyData }) {
+function Body({ data, reports }: { data: TopologyData; reports: ShardReport[] | undefined }) {
   const applyTone =
     data.coordinator.applyErrorRatePerSec > 0.001
       ? "danger"
@@ -78,6 +94,7 @@ function Body({ data }: { data: TopologyData }) {
       </div>
 
       <ShardsCard data={data} />
+      <ShardReportsCard reports={reports} />
       <DomainsCard assignments={data.domainAssignments} />
       <QuotasCard quotas={data.quotas} />
     </div>
@@ -131,6 +148,96 @@ function ShardsCard({ data }: { data: TopologyData }) {
       )}
     </Card>
   );
+}
+
+function ShardReportsCard({ reports }: { reports: ShardReport[] | undefined }) {
+  const subtitle = "Coordinator.ListShardReports · leader-local soft state (stale on failover)";
+  if (reports === undefined) {
+    return (
+      <Card title="Shard reports" subtitle={subtitle}>
+        <div className="text-xs text-neutral-500">Loading…</div>
+      </Card>
+    );
+  }
+  const nowSec = Date.now() / 1000;
+  return (
+    <Card title="Shard reports" subtitle={subtitle}>
+      {reports.length === 0 ? (
+        <div className="text-xs text-neutral-500">
+          No shard reports — the coordinator is rebuilding soft state after a failover, or no shards
+          have reported yet.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {[...reports]
+            .sort((a, b) => a.shardId.localeCompare(b.shardId))
+            .map((r) => {
+              const total = r.summary?.totalMachines ?? 0;
+              const free = r.summary?.freeMachines ?? 0;
+              const types = r.summary
+                ? Object.entries(r.summary.instanceTypeCounts).sort((a, b) => b[1] - a[1])
+                : [];
+              return (
+                <div
+                  key={r.shardId}
+                  className="border border-neutral-100 dark:border-neutral-800 rounded-md p-3"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <Link
+                      to={`/shards/${encodeURIComponent(r.shardId)}`}
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
+                      {r.shardId}
+                    </Link>
+                    <span className="text-xs tabular-nums text-neutral-500 text-right">
+                      {formatInt(free)} free / {formatInt(total)} machines · cycle{" "}
+                      {formatInt(r.cycle)} · {formatRelative(r.receivedAtUnixNs / 1e9, nowSec)}
+                    </span>
+                  </div>
+
+                  {types.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-neutral-500">
+                      {types.slice(0, 6).map(([t, n]) => (
+                        <span key={t} className="font-mono">
+                          {t}: <span className="tabular-nums">{formatInt(n)}</span>
+                        </span>
+                      ))}
+                      {types.length > 6 && <span>+{types.length - 6} more</span>}
+                    </div>
+                  )}
+
+                  {r.shortfalls && r.shortfalls.length > 0 && (
+                    <ul className="mt-2 space-y-0.5 text-xs">
+                      {r.shortfalls.map((s) => (
+                        <li
+                          key={`${s.priority}-${s.penaltyBucket}-${formatDeficit(s.deficit)}`}
+                          className="flex items-center justify-between gap-3 text-amber-700 dark:text-amber-400"
+                        >
+                          <span className="font-mono">
+                            shortfall p{formatInt(s.priority)} · bucket {s.penaltyBucket} · age{" "}
+                            {formatInt(s.ageCycles)}
+                          </span>
+                          <span className="font-mono tabular-nums">{formatDeficit(s.deficit)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function formatDeficit(deficit: Record<string, string>): string {
+  const entries = Object.entries(deficit);
+  if (entries.length === 0) return "—";
+  return entries
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([k, v]) => `${k}=${v}`)
+    .join(" ");
 }
 
 function DomainsCard({ assignments }: { assignments: TopologyDomainAssignment[] }) {
@@ -228,22 +335,3 @@ function QuotasCard({ quotas }: { quotas: TopologyData["quotas"] }) {
   );
 }
 
-function Card({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-      <header className="mb-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-neutral-500 font-mono mt-0.5">{subtitle}</p>}
-      </header>
-      {children}
-    </section>
-  );
-}

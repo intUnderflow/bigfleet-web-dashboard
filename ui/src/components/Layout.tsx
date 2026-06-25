@@ -1,6 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { useConfig } from "../lib/useConfig";
 
 const navItems = [
   { to: "/", label: "Overview", end: true },
@@ -12,7 +11,7 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { data: cfg } = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const { data: cfg } = useConfig();
 
   return (
     <div className="flex h-full">

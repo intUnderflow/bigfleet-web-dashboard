@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useConfig } from "../lib/useConfig";
 import { api, type FinOpsRedFlag, type FinOpsSnapshot } from "../lib/api";
 import { formatInt, formatPenaltyBucket, formatPercent, formatRate } from "../lib/format";
 import { capacityTypeColours, colourFor } from "../lib/colours";
@@ -10,7 +11,7 @@ import Tile from "../components/Tile";
 import StackedBar from "../components/StackedBar";
 
 export default function FinOps() {
-  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const cfg = useConfig();
   const wired = cfg.data?.prometheusWired ?? false;
 
   const snap = useQuery({

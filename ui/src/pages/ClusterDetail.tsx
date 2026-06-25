@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useConfig } from "../lib/useConfig";
 import { api, type ClusterDetail as ClusterDetailData } from "../lib/api";
 import { formatInt } from "../lib/format";
 import { colourFor, crPhaseColours, upcomingNodePhaseColours } from "../lib/colours";
@@ -8,10 +9,11 @@ import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 import Tile from "../components/Tile";
 import StackedBar from "../components/StackedBar";
+import Card from "../components/Card";
 
 export default function ClusterDetail() {
   const { id = "" } = useParams();
-  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const cfg = useConfig();
   const wired = cfg.data?.kubeconfigWired ?? false;
 
   const detail = useQuery({
@@ -99,24 +101,3 @@ function Detail({ data }: { data: ClusterDetailData }) {
   );
 }
 
-function Card({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-      <header className="mb-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {subtitle && (
-          <p className="text-xs text-neutral-500 font-mono mt-0.5">{subtitle}</p>
-        )}
-      </header>
-      {children}
-    </section>
-  );
-}

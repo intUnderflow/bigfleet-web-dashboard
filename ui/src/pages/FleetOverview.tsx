@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useConfig } from "../lib/useConfig";
 import type { AlignedData, Series } from "uplot";
 import { api, type FleetActionsSeries, type FleetOverview as FleetOverviewData } from "../lib/api";
 import { formatDuration, formatInt } from "../lib/format";
@@ -10,7 +11,7 @@ import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 
 export default function FleetOverview() {
-  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const cfg = useConfig();
   const wired = cfg.data?.prometheusWired ?? false;
 
   const overview = useQuery({

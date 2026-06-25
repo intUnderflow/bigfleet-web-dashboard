@@ -152,6 +152,33 @@ export interface ProvidersListResponse {
   queriedAt: string;
 }
 
+export interface ShardReportSummary {
+  totalMachines: number;
+  freeMachines: number;
+  instanceTypeCounts: Record<string, number>;
+  zoneCounts: Record<string, number>;
+}
+
+export interface ShardReportShortfall {
+  priority: number;
+  deficit: Record<string, string>;
+  ageCycles: number;
+  penaltyBucket: string;
+}
+
+export interface ShardReport {
+  shardId: string;
+  cycle: number;
+  receivedAtUnixNs: number;
+  summary?: ShardReportSummary;
+  shortfalls?: ShardReportShortfall[];
+}
+
+export interface ShardReportsListResponse {
+  reports: ShardReport[];
+  queriedAt: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -185,5 +212,6 @@ export const api = {
   cluster: (id: string) => getJSON<ClusterDetail>(`/api/clusters/${encodeURIComponent(id)}`),
   topology: () => getJSON<Topology>("/api/topology"),
   providers: () => getJSON<ProvidersListResponse>("/api/providers"),
+  shardReports: () => getJSON<ShardReportsListResponse>("/api/shard-reports"),
   finopsSnapshot: () => getJSON<FinOpsSnapshot>("/api/finops/snapshot"),
 };

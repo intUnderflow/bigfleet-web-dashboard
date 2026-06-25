@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useConfig } from "../lib/useConfig";
 import { api } from "../lib/api";
 import { formatDuration, formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
@@ -7,7 +8,7 @@ import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 
 export default function ShardsList() {
-  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const cfg = useConfig();
   const wired = cfg.data?.prometheusWired ?? false;
 
   const shards = useQuery({
