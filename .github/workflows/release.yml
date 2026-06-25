@@ -13,29 +13,35 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      # Pin the bigfleet revision the image is built against (the go.mod
+      # `replace => ../bigfleet` clone) so release images are reproducible
+      # instead of tracking whatever bigfleet main happened to be at build
+      # time. Bump BIGFLEET_REF deliberately in its own PR.
+      - id: bigfleet-ref
+        run: echo "ref=$(cat BIGFLEET_REF)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/intunderflow/bigfleet-web-dashboard
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BIGFLEET_REF=main
+            BIGFLEET_REF=${{ steps.bigfleet-ref.outputs.ref }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -46,8 +52,8 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
         with:
           version: v3.16.0
       - name: helm registry login

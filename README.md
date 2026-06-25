@@ -139,7 +139,7 @@ Tagged releases (`v*.*.*`) trigger `.github/workflows/release.yml`, which:
 1. Builds the container image with `make` semantics and pushes to `ghcr.io/intunderflow/bigfleet-web-dashboard` tagged `vX.Y.Z`, `X.Y`, and `X`.
 2. Packages the Helm chart with `version` and `appVersion` rewritten to match the tag and pushes to `oci://ghcr.io/intunderflow/charts/bigfleet-web-dashboard`.
 
-The image build clones [`github.com/intUnderflow/bigfleet`](https://github.com/intUnderflow/bigfleet) at `main` so the `replace github.com/intUnderflow/bigfleet => ../bigfleet` directive in `go.mod` resolves identically in CI and dev. Override with `--build-arg BIGFLEET_REF=<tag-or-commit>` to pin against a specific bigfleet revision.
+The image build clones [`github.com/intUnderflow/bigfleet`](https://github.com/intUnderflow/bigfleet) so the `replace github.com/intUnderflow/bigfleet => ../bigfleet` directive in `go.mod` resolves at build time. For reproducible releases the revision is **pinned** in the [`BIGFLEET_REF`](./BIGFLEET_REF) file (a commit SHA); the release workflow reads it into `--build-arg BIGFLEET_REF`. Bump it deliberately in its own PR when the dashboard needs a newer bigfleet API. (CI still builds against bigfleet `main` so API drift surfaces early; only release images are pinned.) A local `make docker` defaults to `main` unless you pass `--build-arg BIGFLEET_REF=<sha>`.
 
 Tag and push:
 
