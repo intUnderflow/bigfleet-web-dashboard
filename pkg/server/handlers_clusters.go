@@ -92,12 +92,12 @@ func (s *Server) clusterDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, api.ClusterDetail{
-		ID:                          cluster,
-		CapacityRequestsByPhase:     crByPhase,
-		CapacityRequestsTotal:       sumValues(crByPhase),
-		UpcomingNodesByPhase:        unByPhase,
-		UpcomingNodesTotal:          sumValues(unByPhase),
-		QueriedAt:                   time.Now().UTC(),
+		ID:                      cluster,
+		CapacityRequestsByPhase: crByPhase,
+		CapacityRequestsTotal:   sumValues(crByPhase),
+		UpcomingNodesByPhase:    unByPhase,
+		UpcomingNodesTotal:      sumValues(unByPhase),
+		QueriedAt:               time.Now().UTC(),
 	})
 }
 
@@ -117,4 +117,3 @@ func sumValues(m map[string]int) int {
 	}
 	return total
 }
-

@@ -14,10 +14,10 @@ import (
 // PromQL drawn from ../bigfleet/test/scaletest/chart/dashboards/scaletest.json,
 // adapted to expose per-pod aggregates so the dashboard can list shards.
 const (
-	queryShardsCycleP99ByPod = `histogram_quantile(0.99, sum by (le, pod) (rate(bigfleet_shard_cycle_duration_seconds_bucket[5m])))`
-	queryShardsMachinesByPod = `sum by (pod) (bigfleet_shard_inventory_machines)`
+	queryShardsCycleP99ByPod   = `histogram_quantile(0.99, sum by (le, pod) (rate(bigfleet_shard_cycle_duration_seconds_bucket[5m])))`
+	queryShardsMachinesByPod   = `sum by (pod) (bigfleet_shard_inventory_machines)`
 	queryShardsShortfallsByPod = `sum by (pod) (bigfleet_shard_shortfalls)`
-	queryShardsSessionsByPod = `sum by (pod) (bigfleet_shard_active_sessions)`
+	queryShardsSessionsByPod   = `sum by (pod) (bigfleet_shard_active_sessions)`
 )
 
 func (s *Server) shardsListHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,17 +160,17 @@ func (s *Server) shardDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, api.ShardDetail{
-		Pod:                    pod,
-		CycleP99Seconds:        cycleP99,
-		CycleP99ByPhaseSeconds: phaseP99,
-		Machines:               int(machines),
-		MachinesByState:        byState,
-		MachinesByCapacityType: byCapacity,
-		Shortfalls:             int(shortfalls),
-		ActiveSessions:         int(sessions),
+		Pod:                     pod,
+		CycleP99Seconds:         cycleP99,
+		CycleP99ByPhaseSeconds:  phaseP99,
+		Machines:                int(machines),
+		MachinesByState:         byState,
+		MachinesByCapacityType:  byCapacity,
+		Shortfalls:              int(shortfalls),
+		ActiveSessions:          int(sessions),
 		ActionsByKindRatePerSec: actionsByKind,
-		OCCCommittedPerSec:     occCommitted,
-		OCCConflictPerSec:      occConflict,
-		QueriedAt:              now.UTC(),
+		OCCCommittedPerSec:      occCommitted,
+		OCCConflictPerSec:       occConflict,
+		QueriedAt:               now.UTC(),
 	})
 }

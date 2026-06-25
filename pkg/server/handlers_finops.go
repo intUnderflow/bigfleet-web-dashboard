@@ -13,20 +13,20 @@ import (
 // PromQL drawn from docs/user-stories.md §"Cost analysis" in the BigFleet repo.
 // Every block in that section maps to a panel on this page:
 //
-//   sum by (capacity_type) (bigfleet_shard_inventory_machines{state=~"Configured|Idle"})
-//   sum by (capacity_type, interruption_penalty_bucket) (…{state="Configured"})
-//   sum by (interruption_penalty_bucket) (bigfleet_shard_demand_machines)
+//	sum by (capacity_type) (bigfleet_shard_inventory_machines{state=~"Configured|Idle"})
+//	sum by (capacity_type, interruption_penalty_bucket) (…{state="Configured"})
+//	sum by (interruption_penalty_bucket) (bigfleet_shard_demand_machines)
 //
 // plus an explicit Configured/Idle split so the cost-mix card can render the
 // two slices independently.
 const (
-	queryFinopsConfiguredByCapacity    = `sum by (capacity_type) (bigfleet_shard_inventory_machines{state="Configured"})`
-	queryFinopsIdleByCapacity          = `sum by (capacity_type) (bigfleet_shard_inventory_machines{state="Idle"})`
-	queryFinopsConfiguredByCapBucket   = `sum by (capacity_type, interruption_penalty_bucket) (bigfleet_shard_inventory_machines{state="Configured"})`
-	queryFinopsDemandByBucket          = `sum by (interruption_penalty_bucket) (bigfleet_shard_demand_machines)`
-	queryFinopsConfiguredByBucket      = `sum by (interruption_penalty_bucket) (bigfleet_shard_inventory_machines{state="Configured"})`
-	queryFinopsDemandTotal             = `sum(bigfleet_shard_demand_machines)`
-	queryFinopsActionRates             = `sum by (kind) (rate(bigfleet_shard_actions_total[5m]))`
+	queryFinopsConfiguredByCapacity  = `sum by (capacity_type) (bigfleet_shard_inventory_machines{state="Configured"})`
+	queryFinopsIdleByCapacity        = `sum by (capacity_type) (bigfleet_shard_inventory_machines{state="Idle"})`
+	queryFinopsConfiguredByCapBucket = `sum by (capacity_type, interruption_penalty_bucket) (bigfleet_shard_inventory_machines{state="Configured"})`
+	queryFinopsDemandByBucket        = `sum by (interruption_penalty_bucket) (bigfleet_shard_demand_machines)`
+	queryFinopsConfiguredByBucket    = `sum by (interruption_penalty_bucket) (bigfleet_shard_inventory_machines{state="Configured"})`
+	queryFinopsDemandTotal           = `sum(bigfleet_shard_demand_machines)`
+	queryFinopsActionRates           = `sum by (kind) (rate(bigfleet_shard_actions_total[5m]))`
 )
 
 var capacityTypeOrder = []string{"BareMetal", "Reserved", "OnDemand", "Spot"}

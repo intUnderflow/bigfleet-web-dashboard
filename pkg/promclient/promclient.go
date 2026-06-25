@@ -168,7 +168,7 @@ func (c *Client) QueryRangeByLabel(ctx context.Context, q, label string, r v1.Ra
 		}
 		row := make([]float64, steps) // zero-filled; missing samples stay 0
 		for _, sp := range series.Values {
-			idx := int(time.Time(sp.Timestamp.Time()).Sub(r.Start) / r.Step)
+			idx := int(sp.Timestamp.Time().Sub(r.Start) / r.Step)
 			if idx < 0 || idx >= steps {
 				continue
 			}

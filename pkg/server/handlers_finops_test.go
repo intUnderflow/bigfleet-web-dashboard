@@ -14,7 +14,10 @@ import (
 func TestFinOps_PrometheusUnwired(t *testing.T) {
 	srv := newTestServer(t, "")
 	defer srv.Close()
-	res, _ := http.Get(srv.URL + "/api/finops/snapshot")
+	res, err := http.Get(srv.URL + "/api/finops/snapshot")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status: want 503, got %d", res.StatusCode)
@@ -128,7 +131,10 @@ func TestFinOps_NoRedFlagWhenSpotPinnedZero(t *testing.T) {
 	defer prom.Close()
 	srv := newTestServer(t, prom.URL)
 	defer srv.Close()
-	res, _ := http.Get(srv.URL + "/api/finops/snapshot")
+	res, err := http.Get(srv.URL + "/api/finops/snapshot")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	var got api.FinOpsSnapshot
 	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {

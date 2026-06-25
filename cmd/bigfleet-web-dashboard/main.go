@@ -45,10 +45,13 @@ func main() {
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
 
 	logger.Info("bigfleet-web-dashboard starting", "listen", *listen)
-	if err := srv.Run(ctx); err != nil {
+	// Not deferred: os.Exit below would skip a deferred cancel. Stop
+	// listening for signals as soon as Run returns, then exit.
+	err = srv.Run(ctx)
+	cancel()
+	if err != nil {
 		logger.Error("server exited with error", "err", err)
 		os.Exit(1)
 	}

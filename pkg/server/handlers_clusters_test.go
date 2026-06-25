@@ -19,8 +19,8 @@ type stubKube struct {
 	listErr    map[string]error
 }
 
-func (s *stubKube) Configured() bool        { return s.configured }
-func (s *stubKube) Clusters() []string      { return s.clusters }
+func (s *stubKube) Configured() bool   { return s.configured }
+func (s *stubKube) Clusters() []string { return s.clusters }
 
 func (s *stubKube) CountCapacityRequestsByPhase(_ context.Context, cluster string) (map[string]int, error) {
 	if err, ok := s.listErr[cluster]; ok {

@@ -2,6 +2,7 @@ package promclient
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -64,7 +65,7 @@ func TestQueryScalar_NotConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	if _, err := c.QueryScalar(context.Background(), "x", time.Unix(0, 0)); err != ErrNotConfigured {
+	if _, err := c.QueryScalar(context.Background(), "x", time.Unix(0, 0)); !errors.Is(err, ErrNotConfigured) {
 		t.Errorf("QueryScalar on unconfigured client = %v; want ErrNotConfigured", err)
 	}
 }

@@ -43,7 +43,10 @@ func (s *stubCoord) ListQuotas(_ context.Context) ([]coordclient.QuotaAllocation
 func TestTopology_CoordUnwired(t *testing.T) {
 	srv := newTestServerWith(t, "", &stubCoord{configured: false}, nil)
 	defer srv.Close()
-	res, _ := http.Get(srv.URL + "/api/topology")
+	res, err := http.Get(srv.URL + "/api/topology")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status: want 503, got %d", res.StatusCode)
@@ -53,7 +56,10 @@ func TestTopology_CoordUnwired(t *testing.T) {
 func TestTopology_NotLeader(t *testing.T) {
 	srv := newTestServerWith(t, "", &stubCoord{configured: true, err: coordclient.ErrNotLeader}, nil)
 	defer srv.Close()
-	res, _ := http.Get(srv.URL + "/api/topology")
+	res, err := http.Get(srv.URL + "/api/topology")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("status: want 503 (not leader), got %d", res.StatusCode)
@@ -77,7 +83,10 @@ func TestTopology_HappyPath_NoProm(t *testing.T) {
 	}
 	srv := newTestServerWith(t, "", coord, nil)
 	defer srv.Close()
-	res, _ := http.Get(srv.URL + "/api/topology")
+	res, err := http.Get(srv.URL + "/api/topology")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status: want 200, got %d", res.StatusCode)
@@ -136,7 +145,10 @@ func TestTopology_WithProm(t *testing.T) {
 	srv := newTestServerWith(t, prom.URL, coord, nil)
 	defer srv.Close()
 
-	res, _ := http.Get(srv.URL + "/api/topology")
+	res, err := http.Get(srv.URL + "/api/topology")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("status: want 200, got %d", res.StatusCode)
