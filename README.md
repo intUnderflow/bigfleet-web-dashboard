@@ -17,9 +17,11 @@ v0 functional surface complete. All views are wired against real data sources.
 | Providers | `/providers` | Coordinator gRPC (`ListProviders`) |
 | FinOps | `/finops` | Penalty-bucket × capacity-type heatmap (`docs/user-stories.md` red-flag query) |
 
-The coordinator's leader-local soft-state snapshot is also exposed at `GET /api/shard-reports` (`ListShardReports`: latest `ShardSummary` + outstanding shortfalls per shard); surfacing it in a view is a follow-on.
+The coordinator's leader-local soft-state snapshot is also exposed at `GET /api/shard-reports` (`ListShardReports`: latest `ShardSummary` + outstanding shortfalls per shard) and rendered in the Topology view.
 
 Every endpoint returns 503 with an actionable message when its data source isn't wired; every endpoint degrades gracefully when wired-but-failing (per-cluster errors surface inline, partial Prometheus data lands in a `warnings[]` field, etc.).
+
+Where this is headed: [`docs/roadmap.md`](./docs/roadmap.md) (v0.2 observability depth → v1.0 feature-complete read surface). The v0 build history is [`docs/plan.md`](./docs/plan.md).
 
 ## Quick start
 

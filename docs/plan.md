@@ -2,6 +2,9 @@
 
 Companion to [`README.md`](../README.md) and [`CLAUDE.md`](../CLAUDE.md). Lists the milestones for getting from "empty repo" to "useful day-2 surface for BigFleet operators."
 
+> **This is the v0 build history (M0–M6, all shipped).** Forward-looking work — v0.2 onward — lives
+> in [`roadmap.md`](./roadmap.md).
+
 ## v0 goal
 
 Five views, one binary, deployable via Helm against an existing BigFleet install.
