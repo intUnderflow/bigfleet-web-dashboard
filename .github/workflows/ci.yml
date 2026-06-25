@@ -30,11 +30,16 @@ jobs:
         run: go mod download
       - working-directory: bigfleet-web-dashboard
         run: go build ./...
+      # Build golangci-lint from source with this job's Go toolchain rather
+      # than golangci-lint-action's prebuilt binary: the release binary is
+      # compiled with an older Go and refuses to lint a module targeting a
+      # newer Go ("Go language version ... lower than the targeted Go
+      # version"). This mirrors bigfleet's Makefile.
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.5
-          working-directory: bigfleet-web-dashboard
+        working-directory: bigfleet-web-dashboard
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+          golangci-lint run ./...
       - working-directory: bigfleet-web-dashboard
         run: go test -race ./...
 

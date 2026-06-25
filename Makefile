@@ -6,6 +6,9 @@ UI_DIR := ui
 SPA_DIR := pkg/server/spa
 BIN := bin/bigfleet-web-dashboard
 
+GOLANGCI_LINT_VERSION := v1.64.5
+GOLANGCI := bin/golangci-lint
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-18s %s\n",$$1,$$2}'
@@ -39,9 +42,16 @@ build: ui-build ## Build single binary with UI embedded
 test:
 	$(GO) test -race ./...
 
+# Built from source (go install) rather than the prebuilt release so it is
+# compiled with this module's Go toolchain — the release binary is built with
+# an older Go and refuses to lint a newer-targeted module ("Go language
+# version ... lower than the targeted Go version").
+$(GOLANGCI):
+	GOBIN=$(CURDIR)/bin $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
 .PHONY: lint
-lint:
-	$(GO) vet ./...
+lint: $(GOLANGCI) ## Run golangci-lint + UI typecheck
+	$(GOLANGCI) run ./...
 	cd $(UI_DIR) && $(NPM) run typecheck
 
 .PHONY: tidy
