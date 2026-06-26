@@ -126,6 +126,14 @@ export interface ClusterDetail {
   queriedAt: string;
 }
 
+export interface ShardTrends {
+  pod: string;
+  timestamps: number[];
+  cycleP99Seconds: number[];
+  actionRates: Record<string, number[]>;
+  queriedAt: string;
+}
+
 export interface ShardDetail {
   pod: string;
   cycleP99Seconds: number;
@@ -258,6 +266,10 @@ export const api = {
     ),
   shards: () => getJSON<ShardsList>("/api/shards"),
   shard: (pod: string) => getJSON<ShardDetail>(`/api/shards/${encodeURIComponent(pod)}`),
+  shardTrends: (pod: string, duration = "1h", step = "30s") =>
+    getJSON<ShardTrends>(
+      `/api/shards/${encodeURIComponent(pod)}/trends?duration=${encodeURIComponent(duration)}&step=${encodeURIComponent(step)}`
+    ),
   clusters: () => getJSON<ClustersListResponse>("/api/clusters"),
   cluster: (id: string) => getJSON<ClusterDetail>(`/api/clusters/${encodeURIComponent(id)}`),
   availableCapacity: () => getJSON<AvailableCapacityResponse>("/api/available-capacity"),

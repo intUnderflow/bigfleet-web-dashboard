@@ -10,6 +10,7 @@ import ErrorBox from "../components/ErrorBox";
 import Tile from "../components/Tile";
 import StackedBar from "../components/StackedBar";
 import Card from "../components/Card";
+import TimeSeriesChart from "../components/TimeSeriesChart";
 
 export default function ShardDetail() {
   const params = useParams();
@@ -48,7 +49,54 @@ export default function ShardDetail() {
       {wired && !detail.error && !detail.data && (
         <div className="mt-6 text-xs text-neutral-500">Loading…</div>
       )}
+      {wired && pod !== "" && <TrendsCard pod={pod} />}
     </>
+  );
+}
+
+const actionKindColours: Record<string, string> = {
+  Bootstrap: "#2563eb",
+  Provision: "#16a34a",
+  Reclaim: "#f59e0b",
+  Preempt: "#dc2626",
+};
+
+const trendFallback = ["#0891b2", "#7c3aed", "#db2777", "#65a30d"];
+
+function TrendsCard({ pod }: { pod: string }) {
+  const trends = useQuery({
+    queryKey: ["shard-trends", pod],
+    queryFn: () => api.shardTrends(pod),
+    refetchInterval: 30_000,
+  });
+
+  const d = trends.data;
+  const cycleSeries = [{ label: "cycle p99 (s)", values: d?.cycleP99Seconds ?? [], color: "#7c3aed" }];
+  const actionSeries = Object.entries(d?.actionRates ?? {})
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([kind, values], i) => ({
+      label: kind,
+      values,
+      color: actionKindColours[kind] ?? trendFallback[i % trendFallback.length] ?? "#888",
+    }));
+
+  return (
+    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card title="Cycle p99 — last hour" subtitle="histogram_quantile(0.99, …cycle_duration_seconds_bucket{pod=…})">
+        {trends.error ? (
+          <ErrorBox error={trends.error as Error} />
+        ) : (
+          <TimeSeriesChart timestamps={d?.timestamps ?? []} series={cycleSeries} />
+        )}
+      </Card>
+      <Card title="Action rate by kind — last hour" subtitle="sum by (kind) (rate(bigfleet_shard_actions_total{pod=…}[5m]))">
+        {trends.error ? (
+          <ErrorBox error={trends.error as Error} />
+        ) : (
+          <TimeSeriesChart timestamps={d?.timestamps ?? []} series={actionSeries} />
+        )}
+      </Card>
+    </div>
   );
 }
 

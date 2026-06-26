@@ -238,6 +238,16 @@ type AvailableCapacityResponse struct {
 	QueriedAt time.Time                  `json:"queriedAt"`
 }
 
+// ShardTrends is a shard pod's short-window history: aligned timestamps with
+// the cycle-p99 series and per-kind action-rate series (roadmap v0.4).
+type ShardTrends struct {
+	Pod             string               `json:"pod"`
+	Timestamps      []int64              `json:"timestamps"`
+	CycleP99Seconds []float64            `json:"cycleP99Seconds"`
+	ActionRates     map[string][]float64 `json:"actionRates"`
+	QueriedAt       time.Time            `json:"queriedAt"`
+}
+
 type ShardDetail struct {
 	Pod                     string             `json:"pod"`
 	CycleP99Seconds         float64            `json:"cycleP99Seconds"`

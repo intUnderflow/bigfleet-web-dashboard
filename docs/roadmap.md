@@ -60,8 +60,9 @@ The adoption + audit punch-list above.
   recorded Prometheus snapshot of a published run — real data, no fabrication (only the
   Prometheus-backed views populate, since a snapshot has no coordinator / CRD / shard-needs state,
   and the doc says so).
-- **Short-window history.** Extend the drilldowns with Prometheus range queries (cycle-p99 trend,
-  action-rate trend) beyond the single sparkline already present.
+- **Short-window history. ✓** The shard drilldown now carries two Prometheus range-query trend
+  charts — cycle-p99 and action-rate-by-kind over the last hour — via `/api/shards/{pod}/trends`
+  and a reusable `TimeSeriesChart` component (`done`).
 
 ### v1.0 — Feature-complete read surface
 - **Real multi-cluster e2e.** Exercise every view against the bigfleet repo's kind-based e2e harness
