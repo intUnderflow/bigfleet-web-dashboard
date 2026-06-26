@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useConfig } from "../lib/useConfig";
+import { useSearchParamState } from "../lib/useSearchParamState";
 import { api, type NeedView } from "../lib/api";
 import { formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
@@ -41,8 +42,8 @@ export default function Needs() {
   const cfg = useConfig();
   const wired = cfg.data?.coordinatorWired ?? false;
 
-  const [shard, setShard] = useState("");
-  const [filter, setFilter] = useState("");
+  const [shard, setShard] = useSearchParamState("shard");
+  const [filter, setFilter] = useSearchParamState("cluster");
 
   const topology = useQuery({
     queryKey: ["topology"],
@@ -56,7 +57,7 @@ export default function Needs() {
   useEffect(() => {
     const first = shards[0];
     if (!shard && first) setShard(first.shardId);
-  }, [shard, shards]);
+  }, [shard, shards, setShard]);
 
   const needs = useQuery({
     queryKey: ["needs", shard],

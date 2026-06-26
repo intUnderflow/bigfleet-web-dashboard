@@ -31,19 +31,18 @@ Go endpoint + React page + tests, green CI before the next one starts.
 ### v0.1 — Adopt + harden ✓ done
 The adoption + audit punch-list above.
 
-### v0.2 — Observability depth
-- **Needs Explorer.** ✓ done (ADR-0061) — a `/needs` view over a new general-purpose shard-side
+### v0.2 — Observability depth ✓ done
+- **Needs Explorer.** ✓ (ADR-0061) — a `/needs` view over a new general-purpose shard-side
   `ShardRead.InspectNeeds` RPC: a shard's per-Need last-cycle verdict (satisfied vs unmet + a
-  colour-coded reason). The deepest observability slice; shipped ahead of the rest of v0.2.
-- **Shard-reports drilldown.** The Topology card exists; add a `/shard-reports` view (or expand the
-  card) with per-shard zone breakdown and a shortfall list sortable by priority / penalty bucket /
-  age, plus an explicit "follower / rebuilding after failover" state.
-- **Grafana embed where it already wins.** For the timeseries panels the scaletest Grafana
-  dashboard nails, embed via iframe behind `--grafana-url` rather than re-rendering in React.
-- **`AvailableCapacity` view.** The one `bigfleet.lucy.sh` CRD no view reads yet — surface
-  pre-provisioned available capacity per cluster.
-- **Freshness banners.** Surface `received_at` staleness everywhere soft state is shown; banner when
-  the coordinator is a follower or the snapshot is empty.
+  colour-coded reason).
+- **Freshness banners.** ✓ — a reusable `Freshness` component (received-at age + stale/empty states)
+  on the shard-reports + needs surfaces.
+- **Shard-reports drilldown.** ✓ — a `/shard-reports` view with per-shard zone breakdown, shortfalls
+  sortable by priority / age / penalty bucket, and explicit rebuilding/follower banners.
+- **`AvailableCapacity` view.** ✓ — `/available-capacity`, the third `bigfleet.lucy.sh` CRD, grouped
+  by cluster with availability badges + cost.
+- **Grafana embed where it already wins.** ✓ — `GrafanaPanel`/`GrafanaLink` iframe the scale
+  dashboard's timeseries panels behind `--grafana-url`.
 
 ### v0.3 — Operational ergonomics
 - **Auth posture.** Ship an optional `oauth2-proxy` sidecar example in the chart + a doc — a

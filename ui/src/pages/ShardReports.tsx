@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useConfig } from "../lib/useConfig";
+import { useSearchParamState } from "../lib/useSearchParamState";
 import { api, type ShardReport, type ShardReportShortfall } from "../lib/api";
 import { formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
@@ -51,7 +52,10 @@ function sortShortfalls(rows: ShardReportShortfall[], field: SortField): ShardRe
 export default function ShardReports() {
   const cfg = useConfig();
   const wired = cfg.data?.coordinatorWired ?? false;
-  const [sort, setSort] = useState<SortField>("priority");
+  const [sortRaw, setSort] = useSearchParamState("sort", "priority");
+  const sort: SortField = (["priority", "age", "bucket"] as const).includes(sortRaw as SortField)
+    ? (sortRaw as SortField)
+    : "priority";
 
   const reports = useQuery({
     queryKey: ["shard-reports"],
