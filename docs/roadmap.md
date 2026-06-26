@@ -67,7 +67,11 @@ The adoption + audit punch-list above.
 ### v1.0 — Feature-complete read surface
 - **Real multi-cluster e2e.** Exercise every view against the bigfleet repo's kind-based e2e harness
   (multi-cluster, real gRPC, real CRDs) — not just unit/stub tests.
-- **Dashboard SLOs.** Document + measure the render budgets at the scale ceilings.
+- **Dashboard SLOs. ✓** [`docs/slos.md`](./slos.md) decomposes page latency into dashboard overhead
+  (the dashboard's SLO) vs upstream query latency (Prometheus/coordinator/kube SLOs), states the
+  per-request overhead budget (< 50 ms at the scale ceilings) measured by `BenchmarkNeeds` /
+  `BenchmarkShards`, the bounded-upstream-wait guarantee, and the render budget (virtualization >150
+  rows) (`done`).
 - **Endpoint smoke conformance. ✓** `TestAPIConformance` drives every route in the `apiHandlers()`
   table against a full-stub fixture and asserts each returns `200` + a JSON object, under both the
   `/api/v1` and `/api` mounts — so a new route without coverage, or a broken mount, fails the build
