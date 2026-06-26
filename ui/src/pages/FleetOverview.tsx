@@ -9,6 +9,11 @@ import Sparkline from "../components/Sparkline";
 import Tile from "../components/Tile";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
+import GrafanaPanel, { GrafanaLink } from "../components/GrafanaPanel";
+
+// The dashboard the BigFleet chart ships (test/scaletest/chart/dashboards).
+const SCALE_DASHBOARD_UID = "bigfleet-scaletest";
+const SCALE_DASHBOARD_SLUG = "bigfleet-scale-test";
 
 export default function FleetOverview() {
   const cfg = useConfig();
@@ -45,9 +50,46 @@ export default function FleetOverview() {
             error={actions.error as Error | null}
             loading={actions.isLoading}
           />
+          <GrafanaSection grafanaUrl={cfg.data?.grafanaUrl} />
         </div>
       )}
     </>
+  );
+}
+
+// GrafanaSection embeds the scale dashboard's timeseries panels (which
+// already nail these) instead of re-rendering them in React. Renders
+// nothing unless --grafana-url is set.
+function GrafanaSection({ grafanaUrl }: { grafanaUrl: string | undefined }) {
+  if (!grafanaUrl) return null;
+  return (
+    <section>
+      <header className="flex items-baseline justify-between mb-3">
+        <div>
+          <h2 className="text-sm font-semibold">Grafana — scale dashboard</h2>
+          <p className="text-xs text-neutral-500">
+            Embedded panels from the BigFleet scale dashboard (<code className="font-mono">{SCALE_DASHBOARD_UID}</code>).
+          </p>
+        </div>
+        <GrafanaLink grafanaUrl={grafanaUrl} uid={SCALE_DASHBOARD_UID} slug={SCALE_DASHBOARD_SLUG} />
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <GrafanaPanel
+          grafanaUrl={grafanaUrl}
+          uid={SCALE_DASHBOARD_UID}
+          slug={SCALE_DASHBOARD_SLUG}
+          panelId={2}
+          title="CR creates / sec"
+        />
+        <GrafanaPanel
+          grafanaUrl={grafanaUrl}
+          uid={SCALE_DASHBOARD_UID}
+          slug={SCALE_DASHBOARD_SLUG}
+          panelId={96}
+          title="Pod binds cumulative vs target"
+        />
+      </div>
+    </section>
   );
 }
 
