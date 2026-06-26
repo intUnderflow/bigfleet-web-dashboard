@@ -119,64 +119,15 @@ func (c *Client) ListDomainAssignments(ctx context.Context) ([]DomainAssignment,
 	return out, nil
 }
 
-type QuotaAllocation struct {
-	Provider string
-	Region   string
-	PerShard map[string]int32
-}
-
-func (c *Client) ListQuotas(ctx context.Context) ([]QuotaAllocation, error) {
-	if c.api == nil {
-		return nil, ErrNotConfigured
-	}
-	resp, err := c.api.ListQuotas(ctx, &coordpb.ListQuotasRequest{})
-	if err != nil {
-		return nil, mapLeaderErr(err)
-	}
-	out := make([]QuotaAllocation, 0, len(resp.GetAllocations()))
-	for _, q := range resp.GetAllocations() {
-		out = append(out, QuotaAllocation{
-			Provider: q.GetProvider(),
-			Region:   q.GetRegion(),
-			PerShard: q.GetPerShard(),
-		})
-	}
-	return out, nil
-}
-
-// Provider is a registered provider backend (ADR-0060 ListProviders).
-type Provider struct {
-	Name    string
-	Address string
-	Region  string
-}
-
-// ListProviders returns the provider backends the coordinator has registered.
-func (c *Client) ListProviders(ctx context.Context) ([]Provider, error) {
-	if c.api == nil {
-		return nil, ErrNotConfigured
-	}
-	resp, err := c.api.ListProviders(ctx, &coordpb.ListProvidersRequest{})
-	if err != nil {
-		return nil, mapLeaderErr(err)
-	}
-	out := make([]Provider, 0, len(resp.GetProviders()))
-	for _, p := range resp.GetProviders() {
-		out = append(out, Provider{
-			Name:    p.GetName(),
-			Address: p.GetAddress(),
-			Region:  p.GetRegion(),
-		})
-	}
-	return out, nil
-}
-
 // ShardReportSummary is the inventory headline from a shard's last report.
 type ShardReportSummary struct {
 	TotalMachines      int32
 	FreeMachines       int32
 	InstanceTypeCounts map[string]int32
 	ZoneCounts         map[string]int32
+	// ProviderAddress is the out-of-tree provider the shard is bound to
+	// (its --provider-addr); empty = the in-process fake (not deployed).
+	ProviderAddress string
 }
 
 // ShardReportShortfall is one unsatisfied need the shard reported. The
@@ -226,6 +177,7 @@ func (c *Client) ListShardReports(ctx context.Context, shardID string) ([]ShardR
 				FreeMachines:       s.GetFreeMachines(),
 				InstanceTypeCounts: s.GetPerInstanceTypeCounts(),
 				ZoneCounts:         s.GetPerZoneCounts(),
+				ProviderAddress:    s.GetProviderAddress(),
 			}
 		}
 		rep.Shortfalls = make([]ShardReportShortfall, 0, len(r.GetShortfalls()))

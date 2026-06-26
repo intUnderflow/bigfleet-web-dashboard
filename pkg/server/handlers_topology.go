@@ -35,11 +35,6 @@ func (s *Server) topologyHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, statusFromCoordErr(err), "coordinator ListDomainAssignments: "+err.Error())
 		return
 	}
-	quotas, err := s.coord.ListQuotas(ctx)
-	if err != nil {
-		writeError(w, statusFromCoordErr(err), "coordinator ListQuotas: "+err.Error())
-		return
-	}
 
 	var warnings []string
 	pendingByShard := map[string]float64{}
@@ -94,24 +89,10 @@ func (s *Server) topologyHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	apiQuotas := make([]api.TopologyQuota, 0, len(quotas))
-	for _, q := range quotas {
-		perShard := make(map[string]int, len(q.PerShard))
-		for k, v := range q.PerShard {
-			perShard[k] = int(v)
-		}
-		apiQuotas = append(apiQuotas, api.TopologyQuota{
-			Provider: q.Provider,
-			Region:   q.Region,
-			PerShard: perShard,
-		})
-	}
-
 	writeJSON(w, http.StatusOK, api.Topology{
 		Coordinator:       health,
 		Shards:            apiShards,
 		DomainAssignments: apiDomains,
-		Quotas:            apiQuotas,
 		Warnings:          warnings,
 		QueriedAt:         time.Now().UTC(),
 	})

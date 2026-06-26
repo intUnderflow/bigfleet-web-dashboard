@@ -2,7 +2,7 @@
 
 A web dashboard for [BigFleet](https://github.com/intUnderflow/bigfleet) — the fleet-level Kubernetes infrastructure autoscaler.
 
-BigFleet itself ships no in-tree web UI ("`kubectl` + structured logs + Prometheus is the bar," per the main repo's `docs/plan.md` §0). This repo is the consumption layer on top of that contract: a single Go binary that reads BigFleet's Prometheus metrics, calls the coordinator's read-only RPCs (with a `bigfleet://readonly` client certificate — ADR-0048/0060), and queries the `bigfleet.lucy.sh/v1alpha1` CRDs across managed clusters — and presents the result as six focused views.
+BigFleet itself ships no in-tree web UI ("`kubectl` + structured logs + Prometheus is the bar," per the main repo's `docs/plan.md` §0). This repo is the consumption layer on top of that contract: a single Go binary that reads BigFleet's Prometheus metrics, calls the coordinator's read-only RPCs (with a `bigfleet://readonly` client certificate — ADR-0048/0060), and queries the `bigfleet.lucy.sh/v1alpha1` CRDs across managed clusters — and presents the result as a set of focused views.
 
 ## Status
 
@@ -13,11 +13,11 @@ v0 functional surface complete. All views are wired against real data sources.
 | Fleet overview | `/` | Prometheus aggregates |
 | Shards | `/shards`, `/shards/:pod` | Prometheus per-pod |
 | Clusters | `/clusters`, `/clusters/:id` | Managed-cluster apiservers via `--kubeconfig` |
-| Topology | `/topology` | Coordinator gRPC (`ListShards` / `ListDomainAssignments` / `ListQuotas`) + Prometheus coordinator metrics |
-| Providers | `/providers` | Coordinator gRPC (`ListProviders`) |
+| Topology | `/topology` | Coordinator gRPC (`ListShards` / `ListDomainAssignments`) + Prometheus coordinator metrics |
+| Shard capacity | `/shard-reports` | Coordinator gRPC (`ListShardReports`) — per-shard provider binding, inventory + shortfalls |
 | FinOps | `/finops` | Penalty-bucket × capacity-type heatmap (`docs/user-stories.md` red-flag query) |
 
-The coordinator's leader-local soft-state snapshot is also exposed at `GET /api/shard-reports` (`ListShardReports`: latest `ShardSummary` + outstanding shortfalls per shard) and rendered in the Topology view.
+The coordinator's leader-local soft-state snapshot (`ListShardReports`: latest `ShardSummary` + outstanding shortfalls per shard) backs the Shard-capacity view and is also summarized in Topology. Each shard's `ShardSummary` carries the `--provider-addr` it's bound to, so the Shard-capacity view shows which out-of-tree provider each shard dials (empty = the in-process fake).
 
 Every endpoint returns 503 with an actionable message when its data source isn't wired; every endpoint degrades gracefully when wired-but-failing (per-cluster errors surface inline, partial Prometheus data lands in a `warnings[]` field, etc.).
 
@@ -80,9 +80,9 @@ prometheus --config.file=prometheus.yml        # one static binary
 ./bin/bigfleet-web-dashboard --prometheus-url=http://localhost:9090 …
 ```
 
-The coordinator (`/topology`, `/providers`, `/shard-reports`, `/needs`) and the
-CRD views (`/clusters`, `/available-capacity`) don't need Prometheus at all —
-they read the coordinator RPCs and the managed-cluster apiservers directly.
+The coordinator (`/topology`, `/shard-reports`, `/needs`) and the CRD views
+(`/clusters`, `/available-capacity`) don't need Prometheus at all — they read the
+coordinator RPCs and the managed-cluster apiservers directly.
 
 ### Develop with hot-reload
 

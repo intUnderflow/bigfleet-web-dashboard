@@ -40,7 +40,6 @@ func (s *Server) apiHandlers() map[string]http.HandlerFunc {
 		"GET /clusters/{id}":       s.clusterDetailHandler,
 		"GET /available-capacity":  s.availableCapacityHandler,
 		"GET /topology":            s.topologyHandler,
-		"GET /providers":           s.providersHandler,
 		"GET /shard-reports":       s.shardReportsHandler,
 		"GET /needs":               s.needsHandler,
 		"GET /finops/snapshot":     s.finopsHandler,

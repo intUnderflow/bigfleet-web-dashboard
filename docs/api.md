@@ -44,9 +44,8 @@ route that is added without coverage, or a mount that breaks, fails the build.
 | `GET /api/v1/clusters` | kube CRDs | `ClustersListResponse` | Per-managed-cluster CapacityRequest / UpcomingNode counts. |
 | `GET /api/v1/clusters/{id}` | kube CRDs | `ClusterDetail` | One cluster, CR/UpcomingNode counts by phase. `404` if `{id}` is unknown. |
 | `GET /api/v1/available-capacity` | kube CRDs | `AvailableCapacityResponse` | `AvailableCapacity` CR hints per cluster. |
-| `GET /api/v1/topology` | coordinator | `Topology` | Coordinator health, shard registry, domain→shard assignments, quotas. |
-| `GET /api/v1/providers` | coordinator | `ProvidersListResponse` | Registered out-of-tree `CapacityProvider` backends. |
-| `GET /api/v1/shard-reports` | coordinator | `ShardReportsListResponse` | Last roll-up summary + shortfalls per shard. |
+| `GET /api/v1/topology` | coordinator | `Topology` | Coordinator health, shard registry, domain→shard assignments. |
+| `GET /api/v1/shard-reports` | coordinator | `ShardReportsListResponse` | Per-shard roll-up: provider binding + inventory (instance-type/zone) + shortfalls. |
 | `GET /api/v1/needs` | coordinator + shard | `NeedsResponse` | One shard's last-cycle per-Need verdicts (ADR-0061). **Required** `?shard=<id>`; optional `?cluster=<id>`, `?limit=<n>`. |
 | `GET /api/v1/finops/snapshot` | Prometheus | `FinOpsSnapshot` | Penalty-bucket × capacity-type cost view + red flags. |
 

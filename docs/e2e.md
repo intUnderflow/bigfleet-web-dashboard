@@ -65,7 +65,7 @@ discovery turns up no shard/cluster. A route that returns anything other than
 | Var | Required | Meaning |
 |---|---|---|
 | `DASHBOARD_E2E_PROM_URL` | one of the three | Prometheus base URL (fleet/shards/finops/trends views). |
-| `DASHBOARD_E2E_COORD_ADDR` | one of the three | Coordinator gRPC `host:port` (topology/providers/shard-reports/needs). |
+| `DASHBOARD_E2E_COORD_ADDR` | one of the three | Coordinator gRPC `host:port` (topology/shard-reports/needs). |
 | `DASHBOARD_E2E_KUBECONFIG` | one of the three | Kubeconfig with the managed-cluster contexts (clusters/available-capacity). |
 | `DASHBOARD_E2E_GRAFANA_URL` | no | Grafana base URL surfaced in `/config`. |
 | `DASHBOARD_E2E_TLS_CERT/KEY/CA` | iff coordinator mTLS | The `bigfleet://readonly` client identity (ADR-0060). |

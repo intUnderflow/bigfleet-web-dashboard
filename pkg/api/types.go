@@ -80,12 +80,6 @@ type TopologyDomainAssignment struct {
 	ShardID       string `json:"shardId"`
 }
 
-type TopologyQuota struct {
-	Provider string         `json:"provider"`
-	Region   string         `json:"region"`
-	PerShard map[string]int `json:"perShard"`
-}
-
 type FinOpsRedFlag struct {
 	Severity     string  `json:"severity"`
 	CapacityType string  `json:"capacityType"`
@@ -120,7 +114,6 @@ type Topology struct {
 	Coordinator       CoordinatorHealth          `json:"coordinator"`
 	Shards            []TopologyShard            `json:"shards"`
 	DomainAssignments []TopologyDomainAssignment `json:"domainAssignments"`
-	Quotas            []TopologyQuota            `json:"quotas"`
 	Warnings          []string                   `json:"warnings,omitempty"`
 	QueriedAt         time.Time                  `json:"queriedAt"`
 }
@@ -134,24 +127,15 @@ type ClusterDetail struct {
 	QueriedAt               time.Time      `json:"queriedAt"`
 }
 
-// Provider is a registered provider backend (coordinator ListProviders).
-type Provider struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Region  string `json:"region"`
-}
-
-type ProvidersList struct {
-	Providers []Provider `json:"providers"`
-	QueriedAt time.Time  `json:"queriedAt"`
-}
-
 // ShardReportSummary is the inventory headline from a shard's last report.
 type ShardReportSummary struct {
 	TotalMachines      int            `json:"totalMachines"`
 	FreeMachines       int            `json:"freeMachines"`
 	InstanceTypeCounts map[string]int `json:"instanceTypeCounts"`
 	ZoneCounts         map[string]int `json:"zoneCounts"`
+	// ProviderAddress is the out-of-tree provider the shard is bound to
+	// (its --provider-addr); empty = the in-process fake (not deployed).
+	ProviderAddress string `json:"providerAddress"`
 }
 
 // ShardReportShortfall is one unsatisfied need the shard reported. The

@@ -16,8 +16,6 @@ type stubCoord struct {
 	configured bool
 	shards     []coordclient.ShardRegistryEntry
 	domains    []coordclient.DomainAssignment
-	quotas     []coordclient.QuotaAllocation
-	providers  []coordclient.Provider
 	reports    []coordclient.ShardReport
 	err        error
 }
@@ -34,18 +32,6 @@ func (s *stubCoord) ListDomainAssignments(_ context.Context) ([]coordclient.Doma
 		return nil, s.err
 	}
 	return s.domains, nil
-}
-func (s *stubCoord) ListQuotas(_ context.Context) ([]coordclient.QuotaAllocation, error) {
-	if s.err != nil {
-		return nil, s.err
-	}
-	return s.quotas, nil
-}
-func (s *stubCoord) ListProviders(_ context.Context) ([]coordclient.Provider, error) {
-	if s.err != nil {
-		return nil, s.err
-	}
-	return s.providers, nil
 }
 func (s *stubCoord) ListShardReports(_ context.Context, _ string) ([]coordclient.ShardReport, error) {
 	if s.err != nil {
@@ -91,9 +77,6 @@ func TestTopology_HappyPath_NoProm(t *testing.T) {
 			{TopologyKey: "rack", TopologyValue: "r-1", ShardID: "bigfleet-shard-0"},
 			{TopologyKey: "rack", TopologyValue: "r-2", ShardID: "bigfleet-shard-1"},
 		},
-		quotas: []coordclient.QuotaAllocation{
-			{Provider: "aws", Region: "us-east-1", PerShard: map[string]int32{"bigfleet-shard-0": 500, "bigfleet-shard-1": 500}},
-		},
 	}
 	srv := newTestServerWith(t, "", coord, nil)
 	defer srv.Close()
@@ -117,9 +100,6 @@ func TestTopology_HappyPath_NoProm(t *testing.T) {
 	}
 	if len(got.DomainAssignments) != 2 {
 		t.Errorf("domains: %v", got.DomainAssignments)
-	}
-	if len(got.Quotas) != 1 || got.Quotas[0].PerShard["bigfleet-shard-0"] != 500 {
-		t.Errorf("quotas: %v", got.Quotas)
 	}
 	if len(got.Warnings) == 0 {
 		t.Error("expected a warning about prom not being configured")

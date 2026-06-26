@@ -38,7 +38,7 @@ export default function Topology() {
     <>
       <PageHeader
         title="Topology"
-        subtitle="Coordinator state: shard registry, domain assignments, quotas, Raft health."
+        subtitle="Coordinator state: shard registry, domain assignments, Raft health."
       />
 
       {!cfg.isLoading && !wired && <UnwiredNotice source="Coordinator" flag="--coordinator-addr" />}
@@ -97,7 +97,6 @@ function Body({ data, reports }: { data: TopologyData; reports: ShardReport[] | 
       <ShardsCard data={data} />
       <ShardReportsCard reports={reports} />
       <DomainsCard assignments={data.domainAssignments} />
-      <QuotasCard quotas={data.quotas} />
     </div>
   );
 }
@@ -291,49 +290,4 @@ function DomainsCard({ assignments }: { assignments: TopologyDomainAssignment[] 
   );
 }
 
-function QuotasCard({ quotas }: { quotas: TopologyData["quotas"] }) {
-  return (
-    <Card title="Speculative quotas" subtitle="Coordinator.ListQuotas · provider × region → per-shard slice">
-      {quotas.length === 0 ? (
-        <div className="text-xs text-neutral-500">No quota allocations.</div>
-      ) : (
-        <div className="space-y-3">
-          {quotas.map((q) => {
-            const total = Object.values(q.perShard).reduce((s, v) => s + v, 0);
-            return (
-              <div key={`${q.provider}/${q.region}`} className="border border-neutral-100 dark:border-neutral-800 rounded-md p-3">
-                <div className="flex items-baseline justify-between">
-                  <div className="font-mono text-xs">
-                    <span className="text-neutral-500">{q.provider}</span>
-                    <span className="text-neutral-400"> / </span>
-                    <span>{q.region}</span>
-                  </div>
-                  <div className="text-xs tabular-nums text-neutral-500">{formatInt(total)} total</div>
-                </div>
-                <ul className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1 text-xs">
-                  {Object.entries(q.perShard)
-                    .sort((a, b) => a[0].localeCompare(b[0]))
-                    .map(([shard, slice]) => (
-                      <li
-                        key={shard}
-                        className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 py-1"
-                      >
-                        <Link
-                          to={`/shards/${encodeURIComponent(shard)}`}
-                          className="font-mono text-blue-600 hover:underline"
-                        >
-                          {shard}
-                        </Link>
-                        <span className="tabular-nums">{formatInt(slice)}</span>
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
 

@@ -40,7 +40,7 @@ describe("Shard reports drilldown", () => {
     expect(await screen.findByText(/--coordinator-addr/)).toBeInTheDocument();
   });
 
-  it("renders a shard's zone breakdown and its shortfall", async () => {
+  it("renders a shard's provider binding, zone breakdown and its shortfall", async () => {
     vi.stubGlobal(
       "fetch",
       routeFetch({
@@ -56,8 +56,16 @@ describe("Shard reports drilldown", () => {
                 freeMachines: 20,
                 instanceTypeCounts: { "m5.large": 60 },
                 zoneCounts: { "zone-x": 50 },
+                providerAddress: "aws-ec2-provider:7790",
               },
               shortfalls: [{ priority: 1000, deficit: { cpu: "8" }, ageCycles: 3, penaltyBucket: "PENALTY_BUCKET_8192" }],
+            },
+            {
+              shardId: "shard-b",
+              cycle: 88,
+              receivedAtUnixNs: Date.now() * 1e6,
+              summary: { totalMachines: 5, freeMachines: 5, instanceTypeCounts: {}, zoneCounts: {}, providerAddress: "" },
+              shortfalls: [],
             },
           ],
           queriedAt: "",
@@ -66,7 +74,9 @@ describe("Shard reports drilldown", () => {
     );
     renderWithProviders(<ShardReports />);
     expect(await screen.findByText("shard-a")).toBeInTheDocument();
-    expect(await screen.findByText("zone-x")).toBeInTheDocument(); // the new per-zone breakdown
+    expect(await screen.findByText("aws-ec2-provider:7790")).toBeInTheDocument(); // provider binding
+    expect(await screen.findByText(/in-process fake/)).toBeInTheDocument(); // empty → fake fallback (shard-b)
+    expect(await screen.findByText("zone-x")).toBeInTheDocument(); // the per-zone breakdown
     expect(await screen.findByText("8192")).toBeInTheDocument(); // penalty bucket, prefix stripped
     expect(await screen.findByText("cpu=8")).toBeInTheDocument(); // shortfall deficit
   });

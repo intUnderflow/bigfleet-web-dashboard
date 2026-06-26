@@ -47,6 +47,7 @@ func toAPIShardReport(rep coordclient.ShardReport) api.ShardReport {
 			FreeMachines:       int(rep.Summary.FreeMachines),
 			InstanceTypeCounts: int32MapToInt(rep.Summary.InstanceTypeCounts),
 			ZoneCounts:         int32MapToInt(rep.Summary.ZoneCounts),
+			ProviderAddress:    rep.Summary.ProviderAddress,
 		}
 	}
 	r.Shortfalls = make([]api.ShardReportShortfall, 0, len(rep.Shortfalls))

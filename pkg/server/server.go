@@ -32,8 +32,6 @@ type CoordReader interface {
 	Configured() bool
 	ListShards(ctx context.Context) ([]coordclient.ShardRegistryEntry, error)
 	ListDomainAssignments(ctx context.Context) ([]coordclient.DomainAssignment, error)
-	ListQuotas(ctx context.Context) ([]coordclient.QuotaAllocation, error)
-	ListProviders(ctx context.Context) ([]coordclient.Provider, error)
 	ListShardReports(ctx context.Context, shardID string) ([]coordclient.ShardReport, error)
 }
 

@@ -73,8 +73,8 @@ export default function ShardReports() {
   return (
     <>
       <PageHeader
-        title="Shard reports"
-        subtitle="Coordinator.ListShardReports · per-shard inventory + outstanding shortfalls (leader-local soft state)."
+        title="Shard capacity"
+        subtitle="Coordinator.ListShardReports · per-shard provider binding, inventory + outstanding shortfalls (leader-local soft state)."
       />
 
       {!cfg.isLoading && !wired && <UnwiredNotice source="Coordinator" flag="--coordinator-addr" />}
@@ -139,12 +139,22 @@ function ShardCard({ report, sort }: { report: ShardReport; sort: SortField }) {
   const zones = report.summary
     ? Object.entries(report.summary.zoneCounts).sort((a, b) => b[1] - a[1])
     : [];
+  const providerAddr = report.summary?.providerAddress ?? "";
   const shortfalls = sortShortfalls(report.shortfalls ?? [], sort);
 
   return (
     <Card title={report.shardId} subtitle={undefined}>
-      <div className="-mt-2 mb-3">
+      <div className="-mt-2 mb-2">
         <Freshness unixNanos={report.receivedAtUnixNs} cycle={report.cycle} staleAfterSec={20} />
+      </div>
+
+      <div className="mb-3 text-xs">
+        <span className="text-neutral-500">Provider: </span>
+        {providerAddr ? (
+          <span className="font-mono">{providerAddr}</span>
+        ) : (
+          <span className="italic text-neutral-400">in-process fake (not deployed)</span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

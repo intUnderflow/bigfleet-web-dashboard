@@ -36,7 +36,7 @@ the managed-cluster CRDs, or the shards' live needs. So:
 | Shards | ✅ (Prometheus per-pod) |
 | FinOps | ✅ (penalty-bucket × capacity-type metrics) |
 | Topology | ⚠️ Raft/apply tiles only (the coordinator gRPC reads are unwired) |
-| Shard reports / Providers | ❌ (coordinator read RPCs — no live coordinator) |
+| Shard capacity | ❌ (coordinator `ListShardReports` — no live coordinator) |
 | Needs | ❌ (shard `InspectNeeds` — no live shard) |
 | Clusters / Available capacity | ❌ (managed-cluster CRDs — no kubeconfig) |
 

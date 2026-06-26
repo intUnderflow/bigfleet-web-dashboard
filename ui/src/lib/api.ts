@@ -89,17 +89,10 @@ export interface TopologyDomainAssignment {
   shardId: string;
 }
 
-export interface TopologyQuota {
-  provider: string;
-  region: string;
-  perShard: Record<string, number>;
-}
-
 export interface Topology {
   coordinator: CoordinatorHealth;
   shards: TopologyShard[];
   domainAssignments: TopologyDomainAssignment[];
-  quotas: TopologyQuota[];
   warnings?: string[];
   queriedAt: string;
 }
@@ -149,22 +142,14 @@ export interface ShardDetail {
   queriedAt: string;
 }
 
-export interface Provider {
-  name: string;
-  address: string;
-  region: string;
-}
-
-export interface ProvidersListResponse {
-  providers: Provider[];
-  queriedAt: string;
-}
-
 export interface ShardReportSummary {
   totalMachines: number;
   freeMachines: number;
   instanceTypeCounts: Record<string, number>;
   zoneCounts: Record<string, number>;
+  // The out-of-tree provider the shard is bound to (its --provider-addr);
+  // empty = the in-process fake (not deployed).
+  providerAddress: string;
 }
 
 export interface ShardReportShortfall {
@@ -282,7 +267,6 @@ export const api = {
   cluster: (id: string) => getJSON<ClusterDetail>(`/api/clusters/${encodeURIComponent(id)}`),
   availableCapacity: () => getJSON<AvailableCapacityResponse>("/api/available-capacity"),
   topology: () => getJSON<Topology>("/api/topology"),
-  providers: () => getJSON<ProvidersListResponse>("/api/providers"),
   shardReports: () => getJSON<ShardReportsListResponse>("/api/shard-reports"),
   needs: (shard: string, limit = 0) =>
     getJSON<NeedsResponse>(

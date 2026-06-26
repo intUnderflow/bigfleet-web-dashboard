@@ -7,7 +7,7 @@ Go endpoint + React page + tests, green CI before the next one starts.
 
 ## Where we are (June 2026)
 
-- **v0 shipped** — six views (fleet / shards / clusters / topology / providers / finops), one Go
+- **v0 shipped** — the core views (fleet / shards / clusters / topology / finops), one Go
   binary + embedded React SPA, deployable via Helm. See `plan.md`.
 - **v0.1 done** — adopted into the canonical repo + brought to a hardened baseline: ADR-0048 mTLS
   with a `bigfleet://readonly` cert, the ADR-0060 `ListProviders` / `ListShardReports` RPCs

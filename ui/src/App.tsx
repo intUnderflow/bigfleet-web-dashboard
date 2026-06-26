@@ -9,7 +9,6 @@ import AvailableCapacity from "./pages/AvailableCapacity";
 import Topology from "./pages/Topology";
 import ShardReports from "./pages/ShardReports";
 import Needs from "./pages/Needs";
-import Providers from "./pages/Providers";
 import FinOps from "./pages/FinOps";
 import NotFound from "./pages/NotFound";
 
@@ -26,7 +25,6 @@ export default function App() {
         <Route path="/topology" element={<Topology />} />
         <Route path="/shard-reports" element={<ShardReports />} />
         <Route path="/needs" element={<Needs />} />
-        <Route path="/providers" element={<Providers />} />
         <Route path="/finops" element={<FinOps />} />
         <Route path="*" element={<NotFound />} />
       </Route>

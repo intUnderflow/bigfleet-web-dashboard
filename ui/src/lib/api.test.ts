@@ -46,7 +46,7 @@ describe("api getJSON", () => {
         json: async () => ({ error: "coordinator not configured: pass --coordinator-addr" }),
       } as Response),
     );
-    await expect(api.providers()).rejects.toThrow("coordinator not configured");
+    await expect(api.topology()).rejects.toThrow("coordinator not configured");
   });
 
   it("falls back to status text when the error body is not JSON", async () => {
