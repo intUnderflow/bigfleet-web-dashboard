@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/api"
+	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/kubeclient"
 )
 
 type stubKube struct {
@@ -16,11 +17,19 @@ type stubKube struct {
 	clusters   []string
 	crs        map[string]map[string]int
 	uns        map[string]map[string]int
+	avc        map[string][]kubeclient.AvailableCapacity
 	listErr    map[string]error
 }
 
 func (s *stubKube) Configured() bool   { return s.configured }
 func (s *stubKube) Clusters() []string { return s.clusters }
+
+func (s *stubKube) ListAvailableCapacity(_ context.Context, cluster string) ([]kubeclient.AvailableCapacity, error) {
+	if err, ok := s.listErr[cluster]; ok {
+		return nil, err
+	}
+	return s.avc[cluster], nil
+}
 
 func (s *stubKube) CountCapacityRequestsByPhase(_ context.Context, cluster string) (map[string]int, error) {
 	if err, ok := s.listErr[cluster]; ok {

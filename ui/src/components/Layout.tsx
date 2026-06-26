@@ -5,6 +5,7 @@ const navItems = [
   { to: "/", label: "Overview", end: true },
   { to: "/shards", label: "Shards" },
   { to: "/clusters", label: "Clusters" },
+  { to: "/available-capacity", label: "Avail. capacity" },
   { to: "/topology", label: "Topology" },
   { to: "/shard-reports", label: "Shard reports" },
   { to: "/needs", label: "Needs" },

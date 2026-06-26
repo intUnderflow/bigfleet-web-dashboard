@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,8 +22,9 @@ import (
 var ErrNotConfigured = errors.New("kube client not configured: pass --kubeconfig")
 
 var (
-	CapacityRequestsGVR = schema.GroupVersionResource{Group: "bigfleet.lucy.sh", Version: "v1alpha1", Resource: "capacityrequests"}
-	UpcomingNodesGVR    = schema.GroupVersionResource{Group: "bigfleet.lucy.sh", Version: "v1alpha1", Resource: "upcomingnodes"}
+	CapacityRequestsGVR  = schema.GroupVersionResource{Group: "bigfleet.lucy.sh", Version: "v1alpha1", Resource: "capacityrequests"}
+	UpcomingNodesGVR     = schema.GroupVersionResource{Group: "bigfleet.lucy.sh", Version: "v1alpha1", Resource: "upcomingnodes"}
+	AvailableCapacityGVR = schema.GroupVersionResource{Group: "bigfleet.lucy.sh", Version: "v1alpha1", Resource: "availablecapacities"}
 )
 
 type Client struct {
@@ -97,6 +99,75 @@ func (c *Client) countByStatusPhase(ctx context.Context, cluster string, gvr sch
 		out[phase]++
 	}
 	return out, nil
+}
+
+// AvailableCapacity is the read-side projection of one AvailableCapacity CR
+// (a shard's eventually-consistent hint about provisionable capacity).
+type AvailableCapacity struct {
+	Name           string
+	Resources      map[string]string
+	AvailableCount int
+	Availability   string
+	Cost           string
+	Requirements   []string
+}
+
+// ListAvailableCapacity lists the AvailableCapacity CRs in one managed
+// cluster, sorted by availableCount desc then name.
+func (c *Client) ListAvailableCapacity(ctx context.Context, cluster string) ([]AvailableCapacity, error) {
+	cl, err := c.clientFor(cluster)
+	if err != nil {
+		return nil, err
+	}
+	list, err := cl.Resource(AvailableCapacityGVR).List(ctx, metav1.ListOptions{ResourceVersion: "0"})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AvailableCapacity, 0, len(list.Items))
+	for i := range list.Items {
+		obj := list.Items[i].Object
+		avc := AvailableCapacity{Name: list.Items[i].GetName()}
+		if cnt, ok, _ := unstructured.NestedInt64(obj, "spec", "availableCount"); ok {
+			avc.AvailableCount = int(cnt)
+		}
+		avc.Availability, _, _ = unstructured.NestedString(obj, "spec", "availability")
+		avc.Cost, _, _ = unstructured.NestedString(obj, "spec", "cost")
+		avc.Resources, _, _ = unstructured.NestedStringMap(obj, "spec", "resources")
+		avc.Requirements = formatRequirements(obj)
+		out = append(out, avc)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].AvailableCount != out[j].AvailableCount {
+			return out[i].AvailableCount > out[j].AvailableCount
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out, nil
+}
+
+// formatRequirements renders an unstructured spec.requirements list as
+// human-readable "key Op [vals]" strings.
+func formatRequirements(obj map[string]any) []string {
+	reqs, ok, _ := unstructured.NestedSlice(obj, "spec", "requirements")
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(reqs))
+	for _, r := range reqs {
+		m, ok := r.(map[string]any)
+		if !ok {
+			continue
+		}
+		key, _, _ := unstructured.NestedString(m, "key")
+		op, _, _ := unstructured.NestedString(m, "operator")
+		vals, _, _ := unstructured.NestedStringSlice(m, "values")
+		if len(vals) > 0 {
+			out = append(out, fmt.Sprintf("%s %s [%s]", key, op, strings.Join(vals, ",")))
+		} else if key != "" {
+			out = append(out, strings.TrimSpace(key+" "+op))
+		}
+	}
+	return out
 }
 
 func (c *Client) clientFor(cluster string) (dynamic.Interface, error) {

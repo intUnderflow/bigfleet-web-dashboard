@@ -23,6 +23,7 @@ type KubeReader interface {
 	Clusters() []string
 	CountCapacityRequestsByPhase(ctx context.Context, cluster string) (map[string]int, error)
 	CountUpcomingNodesByPhase(ctx context.Context, cluster string) (map[string]int, error)
+	ListAvailableCapacity(ctx context.Context, cluster string) ([]kubeclient.AvailableCapacity, error)
 }
 
 // CoordReader is the subset of the coordinator gRPC client the HTTP handlers

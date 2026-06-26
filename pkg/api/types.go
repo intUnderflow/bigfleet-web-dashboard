@@ -215,6 +215,29 @@ type NeedsResponse struct {
 	QueriedAt           time.Time  `json:"queriedAt"`
 }
 
+// AvailableCapacityItem is one AvailableCapacity CR's hint.
+type AvailableCapacityItem struct {
+	Name           string            `json:"name"`
+	Resources      map[string]string `json:"resources,omitempty"`
+	AvailableCount int               `json:"availableCount"`
+	Availability   string            `json:"availability"`
+	Cost           string            `json:"cost"`
+	Requirements   []string          `json:"requirements,omitempty"`
+}
+
+// AvailableCapacityCluster groups one managed cluster's AvailableCapacity
+// hints; Error is set (and Items empty) when that cluster's read failed.
+type AvailableCapacityCluster struct {
+	ID    string                  `json:"id"`
+	Items []AvailableCapacityItem `json:"items"`
+	Error *string                 `json:"error,omitempty"`
+}
+
+type AvailableCapacityResponse struct {
+	Clusters  []AvailableCapacityCluster `json:"clusters"`
+	QueriedAt time.Time                  `json:"queriedAt"`
+}
+
 type ShardDetail struct {
 	Pod                     string             `json:"pod"`
 	CycleP99Seconds         float64            `json:"cycleP99Seconds"`

@@ -5,6 +5,7 @@ import ShardsList from "./pages/ShardsList";
 import ShardDetail from "./pages/ShardDetail";
 import ClustersList from "./pages/ClustersList";
 import ClusterDetail from "./pages/ClusterDetail";
+import AvailableCapacity from "./pages/AvailableCapacity";
 import Topology from "./pages/Topology";
 import ShardReports from "./pages/ShardReports";
 import Needs from "./pages/Needs";
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/shards/:pod" element={<ShardDetail />} />
         <Route path="/clusters" element={<ClustersList />} />
         <Route path="/clusters/:id" element={<ClusterDetail />} />
+        <Route path="/available-capacity" element={<AvailableCapacity />} />
         <Route path="/topology" element={<Topology />} />
         <Route path="/shard-reports" element={<ShardReports />} />
         <Route path="/needs" element={<Needs />} />

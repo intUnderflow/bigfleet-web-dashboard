@@ -179,6 +179,26 @@ export interface ShardReportsListResponse {
   queriedAt: string;
 }
 
+export interface AvailableCapacityItem {
+  name: string;
+  resources?: Record<string, string>;
+  availableCount: number;
+  availability: string;
+  cost: string;
+  requirements?: string[];
+}
+
+export interface AvailableCapacityCluster {
+  id: string;
+  items: AvailableCapacityItem[];
+  error?: string;
+}
+
+export interface AvailableCapacityResponse {
+  clusters: AvailableCapacityCluster[];
+  queriedAt: string;
+}
+
 export interface NeedView {
   clusterId: string;
   priority: number;
@@ -240,6 +260,7 @@ export const api = {
   shard: (pod: string) => getJSON<ShardDetail>(`/api/shards/${encodeURIComponent(pod)}`),
   clusters: () => getJSON<ClustersListResponse>("/api/clusters"),
   cluster: (id: string) => getJSON<ClusterDetail>(`/api/clusters/${encodeURIComponent(id)}`),
+  availableCapacity: () => getJSON<AvailableCapacityResponse>("/api/available-capacity"),
   topology: () => getJSON<Topology>("/api/topology"),
   providers: () => getJSON<ProvidersListResponse>("/api/providers"),
   shardReports: () => getJSON<ShardReportsListResponse>("/api/shard-reports"),

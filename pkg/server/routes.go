@@ -17,6 +17,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/shards/{pod}", s.shardDetailHandler)
 	s.mux.HandleFunc("GET /api/clusters", s.clustersListHandler)
 	s.mux.HandleFunc("GET /api/clusters/{id}", s.clusterDetailHandler)
+	s.mux.HandleFunc("GET /api/available-capacity", s.availableCapacityHandler)
 	s.mux.HandleFunc("GET /api/topology", s.topologyHandler)
 	s.mux.HandleFunc("GET /api/providers", s.providersHandler)
 	s.mux.HandleFunc("GET /api/shard-reports", s.shardReportsHandler)
