@@ -75,6 +75,35 @@ spec:
               readOnly: true
             {{- end }}
           {{- end }}
+        {{- if .Values.auth.enabled }}
+        # oauth2-proxy sidecar (ADR-0048 posture / roadmap v0.3): a read-only
+        # dashboard still should not be open to the world. The proxy fronts
+        # the Service port and forwards authenticated requests to the
+        # dashboard on localhost. Configure the OIDC provider via the
+        # referenced secret (OAUTH2_PROXY_* env) + extraArgs.
+        - name: oauth2-proxy
+          image: {{ .Values.auth.image }}
+          args:
+            - --http-address=0.0.0.0:{{ .Values.auth.port }}
+            - --upstream=http://127.0.0.1:8080
+            - --reverse-proxy=true
+            {{- range .Values.auth.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- if .Values.auth.secretName }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.auth.secretName }}
+          {{- end }}
+          ports:
+            - name: proxy
+              containerPort: {{ .Values.auth.port }}
+              protocol: TCP
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
       {{- if or .Values.kubeconfig.secretName .Values.coordinatorTLS.secretName }}
       volumes:
         {{- if .Values.kubeconfig.secretName }}

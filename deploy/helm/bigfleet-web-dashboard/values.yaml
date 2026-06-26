@@ -32,6 +32,22 @@ kubeconfig:
   secretName: ""
   path: "/etc/bigfleet-web-dashboard/kubeconfig"
 
+# Optional oauth2-proxy auth sidecar (roadmap v0.3). A read-only dashboard
+# still should not be open to the world; front it with oauth2-proxy. When
+# enabled, the Service targets the proxy, which authenticates and forwards to
+# the dashboard on localhost (so the dashboard can't be reached un-proxied).
+# Put OAUTH2_PROXY_* env (client id/secret, cookie secret) in the secret and
+# the provider/issuer/email-domain flags in extraArgs.
+auth:
+  enabled: false
+  image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+  secretName: ""
+  port: 4180
+  extraArgs: []
+  # - --provider=oidc
+  # - --oidc-issuer-url=https://accounts.google.com
+  # - --email-domain=example.com
+
 # The image runs as nonroot (uid 65532, distroless static). The dashboard
 # writes nothing to disk — the SPA is embedded — so the root filesystem is
 # read-only.

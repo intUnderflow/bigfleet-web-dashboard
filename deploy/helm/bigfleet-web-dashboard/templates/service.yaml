@@ -11,5 +11,7 @@ spec:
   ports:
     - name: http
       port: {{ .Values.service.port }}
-      targetPort: http
+      # When the auth sidecar is enabled, the Service targets the proxy so the
+      # dashboard cannot be reached un-authenticated (roadmap v0.3).
+      targetPort: {{ if .Values.auth.enabled }}proxy{{ else }}http{{ end }}
       protocol: TCP

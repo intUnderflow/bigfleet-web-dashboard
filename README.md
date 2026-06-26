@@ -122,17 +122,29 @@ users:
 ```
 
 RBAC the dashboard needs in each managed cluster — a read-only `ClusterRole`
-(`get`/`list`/`watch` on `capacityrequests` and `upcomingnodes`, the two CRDs
-it reads) plus a binding to the identity your kubeconfig context
-authenticates as. Ready to apply:
+(`get`/`list`/`watch` on `capacityrequests`, `upcomingnodes`, and
+`availablecapacities`, the CRDs it reads) plus a binding to the identity your
+kubeconfig context authenticates as. Edit the binding subject in
+`deploy/rbac/managed-cluster-reader.yaml`, then apply it to every kubeconfig
+context with the helper:
 
 ```sh
-kubectl apply -f deploy/rbac/managed-cluster-reader.yaml   # edit the binding subject first
+deploy/rbac/apply-reader.sh [KUBECONFIG] [CONTEXT ...]   # defaults to all contexts
 ```
 
 This is separate from the install chart: the dashboard reads managed clusters
 over their apiservers (via `--kubeconfig`), not via its own in-cluster
 ServiceAccount, which needs no RBAC where the dashboard runs.
+
+### Authentication (optional)
+
+The dashboard has no built-in auth — read-only is not the same as safe to
+expose. Front it with the bundled **oauth2-proxy** sidecar: set
+`--set auth.enabled=true`, point `auth.secretName` at a Secret holding the
+`OAUTH2_PROXY_*` env, and pass your provider flags in `auth.extraArgs`. When
+enabled, the Service targets the proxy, which authenticates and forwards to
+the dashboard over loopback — so the dashboard can't be reached un-proxied.
+(Or front it with your own ingress-level auth; the sidecar is opt-in.)
 
 ## Releasing
 
