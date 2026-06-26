@@ -102,6 +102,15 @@ The adoption + audit punch-list above.
 ## Anti-goals (explicitly NOT on the roadmap)
 
 - Reimplementing Prometheus, Grafana, or a CRD controller. The dashboard is a *client*.
+  - **Built-in metrics scraping / embedded TSDB — proposed and declined (2026-06-26).** A
+    `--scrape-target` mode (self-scrape `/metrics` into an embedded `prometheus/tsdb` + answer the
+    existing PromQL via `prometheus/promql`) was considered so small deploys could skip an external
+    Prometheus. Declined: it makes the dashboard a metrics *collector*, not a client — the spirit of
+    this anti-goal — and `prometheus/prometheus` is the heaviest dependency in the Go ecosystem
+    (hundreds of transitive deps, a big binary, a constant security/upgrade treadmill) for a narrow
+    benefit, since essentially every BigFleet deployment already runs Prometheus (the receipts /
+    Grafana / scaletest story all assume it). A Prometheus-less deployment runs a *minimal*
+    Prometheus — itself one small static binary — and points the dashboard at it (README).
 - A per-CR / per-pod lifecycle audit trail — BigFleet metrics deliberately drop per-CR action
   linkage for cardinality reasons. Wait for the core to grow a trace surface.
 - Becoming load-bearing.

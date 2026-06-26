@@ -53,6 +53,37 @@ certificate (it must carry the `bigfleet://readonly` URI SAN — ADR-0060):
 
 Omit all three to dial the coordinator in plaintext (the zero-config default).
 
+### No Prometheus yet?
+
+The dashboard is a Prometheus *client* — it does not scrape or store metrics
+itself (that's a deliberate [anti-goal](./docs/roadmap.md#anti-goals-explicitly-not-on-the-roadmap):
+the dashboard stays a thin client, not a metrics collector). For a small or
+single-install deployment that doesn't already run Prometheus, run a *minimal*
+Prometheus — itself one small static binary — scraping the shard and coordinator
+`/metrics`, and point the dashboard at it:
+
+```yaml
+# prometheus.yml — minimal config for the dashboard's views
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: bigfleet-shard       # exposes bigfleet_shard_* (cycle, inventory, actions, OCC)
+    static_configs:
+      - targets: ["bigfleet-shard-0:9090", "bigfleet-shard-1:9090"]
+  - job_name: bigfleet-coordinator # exposes the coordinator raft/apply metrics
+    static_configs:
+      - targets: ["bigfleet-coordinator:9090"]
+```
+
+```sh
+prometheus --config.file=prometheus.yml        # one static binary
+./bin/bigfleet-web-dashboard --prometheus-url=http://localhost:9090 …
+```
+
+The coordinator (`/topology`, `/providers`, `/shard-reports`, `/needs`) and the
+CRD views (`/clusters`, `/available-capacity`) don't need Prometheus at all —
+they read the coordinator RPCs and the managed-cluster apiservers directly.
+
 ### Develop with hot-reload
 
 ```sh
