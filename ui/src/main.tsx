@@ -18,10 +18,15 @@ const queryClient = new QueryClient({
 const container = document.getElementById("root");
 if (!container) throw new Error("missing #root");
 
+// Honour the build-time base path (vite.config.ts) so the router resolves
+// routes under the reverse-proxy prefix; "/" for a standalone build. React
+// Router wants a leading but no trailing slash, except root.
+const basename = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/";
+
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>

@@ -83,6 +83,25 @@ helm install bigfleet-web-dashboard oci://ghcr.io/intunderflow/charts/bigfleet-w
   --set 'ingress.hosts[0].paths[0].path=/'
 ```
 
+### Behind a reverse-proxy path prefix
+
+To serve the dashboard under a path prefix (e.g. `/fleet-dash/`) rather than at
+a host root — say, aggregated alongside other dashboards behind one proxy — the
+prefix must be **baked in at build time**. The SPA uses root-absolute asset and
+API paths (`/assets/…`, `/api/…`), so a `<base href>` can't relocate it; instead
+`BASE_PATH` flows into the Vite asset URLs, the router `basename`, and the API
+fetch prefix (all via `import.meta.env.BASE_URL`). The prefix is the same for
+every session, so this is built **once**, not per request:
+
+```sh
+docker build --build-arg BASE_PATH=/fleet-dash/ -t bigfleet-web-dashboard:fleet-dash .
+```
+
+This assumes a **prefix-stripping** proxy: the proxy forwards `/fleet-dash/…` to
+the dashboard with the `/fleet-dash` prefix removed, so the server still sees
+its own root-absolute `/assets/…` and `/api/…` paths. The default build
+(`BASE_PATH=/`) serves standalone at root and is unchanged.
+
 ## Architecture
 
 ```

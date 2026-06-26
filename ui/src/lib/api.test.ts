@@ -12,12 +12,28 @@ function okJSON(body: unknown): Response {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("api getJSON", () => {
   it("returns the parsed body on 200", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okJSON({ status: "ok" })));
     await expect(api.health()).resolves.toEqual({ status: "ok" });
+  });
+
+  it("uses root-absolute paths for a standalone build", async () => {
+    const f = vi.fn().mockResolvedValue(okJSON({ status: "ok" }));
+    vi.stubGlobal("fetch", f);
+    await api.health();
+    expect(f).toHaveBeenCalledWith("/api/health", expect.anything());
+  });
+
+  it("prefixes requests with the build-time base path behind a proxy", async () => {
+    vi.stubEnv("BASE_URL", "/fleet-dash/");
+    const f = vi.fn().mockResolvedValue(okJSON({ status: "ok" }));
+    vi.stubGlobal("fetch", f);
+    await api.health();
+    expect(f).toHaveBeenCalledWith("/fleet-dash/api/health", expect.anything());
   });
 
   it("throws the error-envelope message on a non-2xx with a JSON body", async () => {

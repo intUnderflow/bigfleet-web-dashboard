@@ -241,8 +241,16 @@ export interface ErrorResponse {
   error: string;
 }
 
+// Build-time base path (vite.config.ts) prefixed onto every request, so the
+// root-absolute /api/... paths land under the reverse-proxy prefix; "" for a
+// standalone build at "/". A prefix-stripping proxy maps /fleet-dash/api/... →
+// the server's /api/... (see README).
+function apiBase(): string {
+  return import.meta.env.BASE_URL.replace(/\/+$/, "");
+}
+
 async function getJSON<T>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  const res = await fetch(apiBase() + path, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {

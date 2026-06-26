@@ -5,13 +5,19 @@ ARG GO_VERSION=1.26
 # BIGFLEET_REF pins the sister repo we depend on for the coordinator proto types.
 # Override to a tag/commit for release builds.
 ARG BIGFLEET_REF=main
+# BASE_PATH bakes a reverse-proxy path prefix (e.g. /fleet-dash/) into the SPA's
+# asset, router, and API paths. Default "/" = standalone at root. Build a
+# prefixed image once with --build-arg BASE_PATH=/fleet-dash/ (see README); it
+# assumes a prefix-stripping proxy.
+ARG BASE_PATH=/
 
 FROM node:${NODE_VERSION}-alpine AS ui-builder
 WORKDIR /app
 COPY ui/package.json ui/package-lock.json* ./
 RUN npm ci --no-audit --no-fund
 COPY ui ./
-RUN npm run build
+ARG BASE_PATH
+RUN BASE_PATH=${BASE_PATH} npm run build
 
 FROM golang:${GO_VERSION}-alpine AS go-builder
 RUN apk add --no-cache git
