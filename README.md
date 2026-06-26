@@ -38,6 +38,10 @@ make build                          # builds bin/bigfleet-web-dashboard with UI 
 
 Open <http://localhost:8080>.
 
+No live fleet handy? You can drive the Prometheus-backed views from a recorded
+scale-test receipt (real data, not a fabricated demo) — see
+[`docs/evaluating.md`](./docs/evaluating.md).
+
 If the coordinator requires mTLS (ADR-0048), add the dashboard's readonly
 certificate (it must carry the `bigfleet://readonly` URI SAN — ADR-0060):
 

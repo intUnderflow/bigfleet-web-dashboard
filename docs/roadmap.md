@@ -44,19 +44,22 @@ The adoption + audit punch-list above.
 - **Grafana embed where it already wins.** ✓ — `GrafanaPanel`/`GrafanaLink` iframe the scale
   dashboard's timeseries panels behind `--grafana-url`.
 
-### v0.3 — Operational ergonomics
-- **Auth posture.** Ship an optional `oauth2-proxy` sidecar example in the chart + a doc — a
-  read-only dashboard still should not be open to the world.
-- **Reader-RBAC bootstrap helper.** A small script to `kubectl apply` `deploy/rbac/managed-cluster-reader.yaml`
-  across kubeconfig contexts.
-- **Deep links + saved filters.** URL-encode the phase/topology filters so a view is shareable.
-- **Scale-ceiling rendering.** Virtualised tables for the 20K-cluster / 200-shard ceilings; meet
-  the `plan.md` render budgets (fleet <500ms cold / <100ms warm; drilldown <1s).
+### v0.3 — Operational ergonomics ✓ done
+- **Deep links + saved filters.** ✓ — a `useSearchParamState` hook; Needs (shard + cluster) and
+  shard-reports (sort) filters live in the URL.
+- **Scale-ceiling rendering.** ✓ — the Needs table virtualises above 150 rows (@tanstack/react-virtual).
+- **Auth posture.** ✓ — an opt-in `oauth2-proxy` sidecar in the chart (Service fronts the proxy) + docs.
+- **Reader-RBAC bootstrap helper.** ✓ — `deploy/rbac/apply-reader.sh` applies the reader role across
+  kubeconfig contexts.
 
 ### v0.4 — Evidence + history
-- **Reference-fleet demo mode.** Point the dashboard at the published scale-test receipts (the
-  bigfleet site's Grafana-loadable bundles) so it renders a real fleet with no live BigFleet — a
-  zero-setup demo.
+- **Evaluate against a recorded snapshot, NOT a fabricated demo.** A "demo mode" that ships
+  hand-written fleet numbers was considered and **rejected** (author, 2026-06-26): the whole project
+  pitch is *real data + receipts*, and fabricated fixtures cut against that and are version-coupled
+  maintenance. The honest path is documented in `docs/evaluating.md`: run the dashboard against a
+  recorded Prometheus snapshot of a published run — real data, no fabrication (only the
+  Prometheus-backed views populate, since a snapshot has no coordinator / CRD / shard-needs state,
+  and the doc says so).
 - **Short-window history.** Extend the drilldowns with Prometheus range queries (cycle-p99 trend,
   action-rate trend) beyond the single sparkline already present.
 
