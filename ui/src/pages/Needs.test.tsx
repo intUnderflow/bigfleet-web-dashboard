@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import Needs from "./Needs";
@@ -86,5 +86,42 @@ describe("Needs explorer", () => {
     renderWithProviders(<Needs />);
     expect(await screen.findByText("payments")).toBeInTheDocument();
     expect(await screen.findByText("PRIORITY_STARVED")).toBeInTheDocument();
+  });
+
+  it("windows a large needs list rather than mounting every row", async () => {
+    const many = Array.from({ length: 400 }, (_, i) => ({
+      clusterId: `c${i}`,
+      priority: 1000,
+      aggregateResources: { cpu: "1" },
+      interruptionPenaltyBucket: "1",
+      reclamationPenaltyBucket: "0",
+      satisfied: true,
+      claimedMachineCount: 1,
+      bootstrapCount: 0,
+      provisionCount: 0,
+      sameSatisfiable: false,
+      acquisitionParked: false,
+      ageCyclesUnmet: 0,
+      unmetReason: "UNSPECIFIED",
+    }));
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
+        "/api/topology": {
+          coordinator: { raftTerm: 1, applyRatePerSec: 0, applyErrorRatePerSec: 0, pendingInstructionsTotal: 0 },
+          shards: [{ shardId: "shard-a", address: "", registeredAtUnixSec: 0, lastHeartbeatUnixSec: 0, pendingInstructions: 0 }],
+          domainAssignments: [],
+          quotas: [],
+          queriedAt: "",
+        },
+        "/api/needs": { shardId: "shard-a", cycle: 1, computedAtUnixNanos: 0, totalNeeds: 400, needs: many },
+      }),
+    );
+    renderWithProviders(<Needs />);
+    // The header renders (the virtualized path mounted) ...
+    expect(await screen.findByText("Cluster")).toBeInTheDocument();
+    // ... but far fewer than all 400 cluster cells are in the DOM.
+    await waitFor(() => expect(screen.queryAllByText(/^c\d+$/).length).toBeLessThan(400));
   });
 });

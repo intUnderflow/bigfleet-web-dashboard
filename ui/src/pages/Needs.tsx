@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useConfig } from "../lib/useConfig";
 import { useSearchParamState } from "../lib/useSearchParamState";
 import { api, type NeedView } from "../lib/api";
@@ -129,70 +130,186 @@ export default function Needs() {
         </div>
       )}
 
-      {wired && !needs.error && (
-        <section className="mt-4 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="text-left font-medium px-3 py-2">Cluster</th>
-                <th className="text-right font-medium px-3 py-2">Prio</th>
-                <th className="text-left font-medium px-3 py-2">Aggregate</th>
-                <th className="text-left font-medium px-3 py-2">Min unit</th>
-                <th className="text-left font-medium px-3 py-2">Int$/Rec$</th>
-                <th className="text-left font-medium px-3 py-2">Status</th>
-                <th className="text-left font-medium px-3 py-2">Deficit</th>
-                <th className="text-right font-medium px-3 py-2">Claimed</th>
-                <th className="text-left font-medium px-3 py-2">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {needs.isLoading && (
-                <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-xs text-neutral-500">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {needs.data && rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-xs text-neutral-500">
-                    {needs.data.cycle === 0
-                      ? "Shard is rebuilding its needs ledger (no cycle yet)."
-                      : "No needs match."}
-                  </td>
-                </tr>
-              )}
-              {rows.map((n, i) => (
-                <tr
-                  key={`${n.clusterId}/${n.group}/${n.priority}/${i}`}
-                  className="border-t border-neutral-100 dark:border-neutral-800 align-top"
-                >
-                  <td className="px-3 py-2 font-mono text-xs">{n.clusterId}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatInt(n.priority)}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{resStr(n.aggregateResources)}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">{resStr(n.minUnit)}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-500">
-                    {n.interruptionPenaltyBucket}/{n.reclamationPenaltyBucket}
-                  </td>
-                  <td className="px-3 py-2">
-                    <StatusCell n={n} />
-                  </td>
-                  <td className="px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400">
-                    {n.satisfied ? "—" : resStr(n.residualDeficit)}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatInt(n.claimedMachineCount)}</td>
-                  <td className="px-3 py-2 text-xs text-neutral-500">
-                    {n.group && <span className="font-mono">gang {n.group} </span>}
-                    {n.sameDomain && <span className="font-mono">@{n.sameDomain} </span>}
-                    {n.acquisitionParked && <span className="text-purple-600 dark:text-purple-400">parked </span>}
-                    {!n.satisfied && n.ageCyclesUnmet > 0 && <span>age {formatInt(n.ageCyclesUnmet)}</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+      {wired && !needs.error && needs.isLoading && (
+        <div className="mt-4 text-xs text-neutral-500">Loading…</div>
       )}
+      {wired && !needs.error && needs.data && rows.length === 0 && (
+        <div className="mt-4 text-xs text-neutral-500">
+          {needs.data.cycle === 0
+            ? "Shard is rebuilding its needs ledger (no cycle yet)."
+            : "No needs match."}
+        </div>
+      )}
+      {wired && !needs.error && rows.length > 0 && <NeedsGrid rows={rows} />}
     </>
+  );
+}
+
+// Column layout shared by the virtualized header and rows.
+const gridCols: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "minmax(110px,1.4fr) 60px minmax(130px,1.8fr) minmax(110px,1.4fr) 92px 150px minmax(110px,1.4fr) 64px minmax(130px,1.8fr)",
+};
+
+function HeadCell({ children, right = false }: { children: ReactNode; right?: boolean }) {
+  return <div className={`px-3 py-2 font-medium ${right ? "text-right" : "text-left"}`}>{children}</div>;
+}
+
+function Cell({
+  children,
+  right = false,
+  mono = false,
+  muted = false,
+  className = "",
+  title,
+}: {
+  children: ReactNode;
+  right?: boolean;
+  mono?: boolean;
+  muted?: boolean;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <div
+      title={title}
+      className={`px-3 truncate ${right ? "text-right tabular-nums" : "text-left"} ${
+        mono ? "font-mono text-xs" : ""
+      } ${muted ? "text-neutral-500" : ""} ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function notes(n: NeedView): string {
+  const parts: string[] = [];
+  if (n.group) parts.push(`gang ${n.group}`);
+  if (n.sameDomain) parts.push(`@${n.sameDomain}`);
+  if (n.acquisitionParked) parts.push("parked");
+  if (!n.satisfied && n.ageCyclesUnmet > 0) parts.push(`age ${n.ageCyclesUnmet}`);
+  return parts.join(" · ");
+}
+
+function NeedsHeader() {
+  return (
+    <div
+      style={gridCols}
+      className="bg-neutral-50 dark:bg-neutral-900/60 text-xs uppercase tracking-wide text-neutral-500"
+    >
+      <HeadCell>Cluster</HeadCell>
+      <HeadCell right>Prio</HeadCell>
+      <HeadCell>Aggregate</HeadCell>
+      <HeadCell>Min unit</HeadCell>
+      <HeadCell>Int$/Rec$</HeadCell>
+      <HeadCell>Status</HeadCell>
+      <HeadCell>Deficit</HeadCell>
+      <HeadCell right>Claimed</HeadCell>
+      <HeadCell>Notes</HeadCell>
+    </div>
+  );
+}
+
+function NeedRowCells({ n }: { n: NeedView }) {
+  return (
+    <>
+      <Cell mono>{n.clusterId}</Cell>
+      <Cell right>{formatInt(n.priority)}</Cell>
+      <Cell mono title={resStr(n.aggregateResources)}>
+        {resStr(n.aggregateResources)}
+      </Cell>
+      <Cell mono muted title={resStr(n.minUnit)}>
+        {resStr(n.minUnit)}
+      </Cell>
+      <Cell mono muted>
+        {n.interruptionPenaltyBucket}/{n.reclamationPenaltyBucket}
+      </Cell>
+      <div className="px-3 truncate">
+        <StatusCell n={n} />
+      </div>
+      <Cell
+        mono
+        className="text-amber-700 dark:text-amber-400"
+        title={n.satisfied ? "" : resStr(n.residualDeficit)}
+      >
+        {n.satisfied ? "—" : resStr(n.residualDeficit)}
+      </Cell>
+      <Cell right>{formatInt(n.claimedMachineCount)}</Cell>
+      <Cell muted title={notes(n)}>
+        {notes(n)}
+      </Cell>
+    </>
+  );
+}
+
+// Above this many rows the table windows (only the visible slice mounts);
+// below it the overhead isn't worth it, so every row renders.
+const VIRTUALIZE_OVER = 150;
+
+// NeedsGrid renders the per-Need rows. A shard can hold tens of thousands of
+// needs (roadmap v0.3 scale ceilings), so large lists are virtualized;
+// small ones render plainly. Fixed-height rows; long cells truncate with a
+// title tooltip.
+function NeedsGrid({ rows }: { rows: NeedView[] }) {
+  if (rows.length <= VIRTUALIZE_OVER) {
+    return (
+      <section className="mt-4 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+        <NeedsHeader />
+        <div>
+          {rows.map((n, i) => (
+            <div
+              key={`${n.clusterId}/${n.group}/${n.priority}/${i}`}
+              style={gridCols}
+              className="items-center border-t border-neutral-100 dark:border-neutral-800 text-sm py-1.5"
+            >
+              <NeedRowCells n={n} />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+  return <VirtualNeedsGrid rows={rows} />;
+}
+
+function VirtualNeedsGrid({ rows }: { rows: NeedView[] }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virt = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 37,
+    overscan: 14,
+  });
+
+  return (
+    <section className="mt-4 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+      <NeedsHeader />
+      <div ref={parentRef} className="overflow-auto" style={{ maxHeight: "68vh" }}>
+        <div style={{ height: virt.getTotalSize(), position: "relative", width: "100%" }}>
+          {virt.getVirtualItems().map((vi) => {
+            const n = rows[vi.index];
+            if (!n) return null;
+            return (
+              <div
+                key={vi.key}
+                style={{
+                  ...gridCols,
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: vi.size,
+                  transform: `translateY(${vi.start}px)`,
+                }}
+                className="items-center border-t border-neutral-100 dark:border-neutral-800 text-sm"
+              >
+                <NeedRowCells n={n} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
