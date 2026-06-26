@@ -68,9 +68,13 @@ The adoption + audit punch-list above.
 - **Real multi-cluster e2e.** Exercise every view against the bigfleet repo's kind-based e2e harness
   (multi-cluster, real gRPC, real CRDs) — not just unit/stub tests.
 - **Dashboard SLOs.** Document + measure the render budgets at the scale ceilings.
-- **Endpoint smoke conformance.** A scripted check that every `/api/*` endpoint returns sane shapes
-  against a known fixture.
-- **Versioned API contract.** Freeze `/api/v1` so external operator tooling can depend on it.
+- **Endpoint smoke conformance. ✓** `TestAPIConformance` drives every route in the `apiHandlers()`
+  table against a full-stub fixture and asserts each returns `200` + a JSON object, under both the
+  `/api/v1` and `/api` mounts — so a new route without coverage, or a broken mount, fails the build
+  (`done`).
+- **Versioned API contract. ✓** Every endpoint is dual-mounted under `/api/v1` (the frozen external
+  contract) and the bare `/api` (the SPA's convenience alias). The contract + stability policy are
+  documented in [`docs/api.md`](./api.md) (`done`).
 
 ### Beyond v1 (demand-gated)
 - **Write surface.** A *separate* binary + a *distinct* `bigfleet://dashboard-operator` identity +

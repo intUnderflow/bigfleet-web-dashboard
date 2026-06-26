@@ -21,6 +21,8 @@ The coordinator's leader-local soft-state snapshot is also exposed at `GET /api/
 
 Every endpoint returns 503 with an actionable message when its data source isn't wired; every endpoint degrades gracefully when wired-but-failing (per-cluster errors surface inline, partial Prometheus data lands in a `warnings[]` field, etc.).
 
+The HTTP read surface is versioned and frozen at `/api/v1` (the bare `/api` prefix is a convenience alias the bundled SPA uses); the full contract and stability policy are in [`docs/api.md`](./docs/api.md).
+
 Where this is headed: [`docs/roadmap.md`](./docs/roadmap.md) (v0.2 observability depth → v1.0 feature-complete read surface). The v0 build history is [`docs/plan.md`](./docs/plan.md).
 
 ## Quick start
