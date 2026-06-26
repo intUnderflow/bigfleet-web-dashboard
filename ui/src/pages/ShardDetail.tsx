@@ -30,9 +30,9 @@ export default function ShardDetail() {
     <>
       <PageHeader
         title={
-          <span className="font-mono text-base">
-            <Link to="/shards" className="text-neutral-500 hover:underline">shards</Link>
-            <span className="text-neutral-400"> / </span>
+          <span className="font-mono">
+            <Link to="/shards" className="text-[var(--text-muted)] hover:underline">shards</Link>
+            <span className="text-[var(--text-subtle)]"> / </span>
             <span>{pod}</span>
           </span>
         }
@@ -40,16 +40,13 @@ export default function ShardDetail() {
       />
 
       {!cfg.isLoading && !wired && <UnwiredNotice />}
-      {wired && detail.error && (
-        <div className="mt-6">
-          <ErrorBox error={detail.error as Error} />
-        </div>
-      )}
-      {wired && !detail.error && detail.data && <Detail data={detail.data} />}
-      {wired && !detail.error && !detail.data && (
-        <div className="mt-6 text-xs text-neutral-500">Loading…</div>
-      )}
-      {wired && pod !== "" && <TrendsCard pod={pod} />}
+      {wired && detail.error && <ErrorBox error={detail.error as Error} />}
+
+      <div className="flex flex-col gap-6">
+        {wired && !detail.error && detail.data && <Detail data={detail.data} />}
+        {wired && !detail.error && !detail.data && <div className="text-sm text-[var(--text-muted)]">Loading…</div>}
+        {wired && pod !== "" && <TrendsCard pod={pod} />}
+      </div>
     </>
   );
 }
@@ -81,35 +78,25 @@ function TrendsCard({ pod }: { pod: string }) {
     }));
 
   return (
-    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
       <Card title="Cycle p99 — last hour" subtitle="histogram_quantile(0.99, …cycle_duration_seconds_bucket{pod=…})">
-        {trends.error ? (
-          <ErrorBox error={trends.error as Error} />
-        ) : (
-          <TimeSeriesChart timestamps={d?.timestamps ?? []} series={cycleSeries} />
-        )}
+        {trends.error ? <ErrorBox error={trends.error as Error} /> : <TimeSeriesChart timestamps={d?.timestamps ?? []} series={cycleSeries} />}
       </Card>
       <Card title="Action rate by kind — last hour" subtitle="sum by (kind) (rate(bigfleet_shard_actions_total{pod=…}[5m]))">
-        {trends.error ? (
-          <ErrorBox error={trends.error as Error} />
-        ) : (
-          <TimeSeriesChart timestamps={d?.timestamps ?? []} series={actionSeries} />
-        )}
+        {trends.error ? <ErrorBox error={trends.error as Error} /> : <TimeSeriesChart timestamps={d?.timestamps ?? []} series={actionSeries} />}
       </Card>
     </div>
   );
 }
 
 function Detail({ data }: { data: ShardDetailData }) {
-  const cycleTone =
-    data.cycleP99Seconds > 5 ? "danger" : data.cycleP99Seconds > 1 ? "warn" : "neutral";
-  const shortfallTone = data.shortfalls > 0 ? "danger" : "neutral";
+  const cycleTone = data.cycleP99Seconds > 5 ? "danger" : data.cycleP99Seconds > 1 ? "warn" : "good";
+  const shortfallTone = data.shortfalls > 0 ? "danger" : "good";
   const conflictRatio =
     data.occCommittedPerSec + data.occConflictPerSec > 0
       ? data.occConflictPerSec / (data.occCommittedPerSec + data.occConflictPerSec)
       : 0;
-  const conflictTone =
-    conflictRatio > 0.3 ? "danger" : conflictRatio > 0.15 ? "warn" : "neutral";
+  const conflictTone = conflictRatio > 0.3 ? "danger" : conflictRatio > 0.15 ? "warn" : "good";
 
   const stateSegments = Object.entries(data.machinesByState ?? {}).map(([k, v], i) => ({
     label: k,
@@ -122,16 +109,12 @@ function Detail({ data }: { data: ShardDetailData }) {
     colour: colourFor(capacityTypeColours, k, i),
   }));
 
-  const phaseRows = Object.entries(data.cycleP99ByPhaseSeconds ?? {}).sort(
-    (a, b) => b[1] - a[1]
-  );
-  const actionRows = Object.entries(data.actionsByKindRatePerSec ?? {}).sort(
-    (a, b) => b[1] - a[1]
-  );
+  const phaseRows = Object.entries(data.cycleP99ByPhaseSeconds ?? {}).sort((a, b) => b[1] - a[1]);
+  const actionRows = Object.entries(data.actionsByKindRatePerSec ?? {}).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="mt-6 flex flex-col gap-6">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Tile label="Cycle p99" value={formatDuration(data.cycleP99Seconds)} tone={cycleTone} />
         <Tile label="Machines" value={formatInt(data.machines)} />
         <Tile label="Sessions" value={formatInt(data.activeSessions)} />
@@ -152,38 +135,28 @@ function Detail({ data }: { data: ShardDetailData }) {
         <StackedBar segments={capacitySegments} formatValue={(v) => formatInt(v)} />
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card title="Cycle p99 by phase" subtitle="histogram_quantile(0.99, …phase_duration_seconds_bucket{pod=…})">
-          <ul className="text-sm">
-            {phaseRows.length === 0 && <li className="text-xs text-neutral-500">no data</li>}
-            {phaseRows.map(([phase, sec]) => (
-              <li
-                key={phase}
-                className="flex items-center justify-between py-1 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
-              >
-                <span className="font-mono text-xs">{phase}</span>
-                <span className="tabular-nums">{formatDuration(sec)}</span>
-              </li>
-            ))}
-          </ul>
+          <KVList rows={phaseRows} empty="no data" format={formatDuration} />
         </Card>
-
         <Card title="Action rate by kind" subtitle="sum by (kind) (rate(bigfleet_shard_actions_total{pod=…}[5m]))">
-          <ul className="text-sm">
-            {actionRows.length === 0 && <li className="text-xs text-neutral-500">no actions in last 5m</li>}
-            {actionRows.map(([kind, perSec]) => (
-              <li
-                key={kind}
-                className="flex items-center justify-between py-1 border-b border-neutral-100 dark:border-neutral-800 last:border-0"
-              >
-                <span className="font-mono text-xs">{kind}</span>
-                <span className="tabular-nums">{formatRate(perSec)}</span>
-              </li>
-            ))}
-          </ul>
+          <KVList rows={actionRows} empty="no actions in last 5m" format={formatRate} />
         </Card>
       </div>
     </div>
   );
 }
 
+function KVList({ rows, empty, format }: { rows: [string, number][]; empty: string; format: (v: number) => string }) {
+  if (rows.length === 0) return <div className="text-sm text-[var(--text-muted)]">{empty}</div>;
+  return (
+    <ul className="text-sm">
+      {rows.map(([k, v]) => (
+        <li key={k} className="flex items-center justify-between border-b border-[var(--border)] py-1.5 last:border-0">
+          <span className="font-mono text-xs text-[var(--text)]">{k}</span>
+          <span className="tabular-nums text-[var(--text-muted)]">{format(v)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}

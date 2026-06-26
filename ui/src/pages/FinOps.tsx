@@ -29,15 +29,9 @@ export default function FinOps() {
       />
 
       {!cfg.isLoading && !wired && <UnwiredNotice />}
-      {wired && snap.error && (
-        <div className="mt-6">
-          <ErrorBox error={snap.error as Error} />
-        </div>
-      )}
+      {wired && snap.error && <ErrorBox error={snap.error as Error} />}
       {wired && !snap.error && snap.data && <Body data={snap.data} />}
-      {wired && !snap.error && !snap.data && (
-        <div className="mt-6 text-xs text-neutral-500">Loading…</div>
-      )}
+      {wired && !snap.error && !snap.data && <div className="text-sm text-[var(--text-muted)]">Loading…</div>}
     </>
   );
 }
@@ -45,7 +39,7 @@ export default function FinOps() {
 function Body({ data }: { data: FinOpsSnapshot }) {
   const redFlags = data.redFlags ?? [];
   return (
-    <div className="mt-6 flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
       {redFlags.length > 0 && <RedFlags flags={redFlags} />}
       <Lede />
       <PenaltyBucketExplainer />
@@ -64,14 +58,14 @@ function Body({ data }: { data: FinOpsSnapshot }) {
 
 function Lede() {
   return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/40 p-5 text-sm leading-relaxed">
-      <p className="text-neutral-700 dark:text-neutral-300">
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-5 text-sm leading-relaxed">
+      <p className="text-[var(--text-muted)]">
         BigFleet provisions machines through pluggable capacity providers and routes workloads to them based on a
         fixed cost formula: <code className="font-mono text-xs">effective_cost = price + interruption_probability × interruption_penalty</code>.
         That makes <strong>capacity type</strong> (bare-metal / reserved / on-demand / spot) and the workload's
         <strong> interruption penalty</strong> the two levers that decide where your money lands.
       </p>
-      <p className="mt-3 text-neutral-700 dark:text-neutral-300">
+      <p className="mt-3 text-[var(--text-muted)]">
         This page slices the live inventory along both axes so you can see at a glance whether the routing the engine
         actually did matches the routing your cost policy intended. Red flags appear at the top when those diverge.
       </p>
@@ -85,13 +79,13 @@ function PenaltyBucketExplainer() {
   return (
     <section>
       <h2 className="text-base font-semibold mb-2">What is a penalty bucket?</h2>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3 leading-relaxed">
+      <p className="text-sm text-[var(--text-muted)] mb-3 leading-relaxed">
         "Penalty bucket" is the unit every other chart on this page is sliced by, so the rest of the page won't make
         sense without it. Skim this once and the matrix below reads itself.
       </p>
 
-      <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 text-sm leading-relaxed">
-        <p className="text-neutral-800 dark:text-neutral-200">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 text-sm leading-relaxed">
+        <p className="text-[var(--text)]">
           Every <code className="font-mono text-xs">CapacityRequest</code> a workload submits carries an{" "}
           <code className="font-mono text-xs">interruptionPenalty</code> field — the workload owner's stated dollar cost
           of being killed mid-run. A trainer that would lose four hours of work if interrupted might declare{" "}
@@ -99,15 +93,15 @@ function PenaltyBucketExplainer() {
           <span className="font-mono">$0</span>.
         </p>
 
-        <p className="mt-3 text-neutral-800 dark:text-neutral-200">
+        <p className="mt-3 text-[var(--text)]">
           BigFleet quantises that raw dollar value into a bucket — <strong>powers of 2 from $0.50 to $8.4M</strong>,
           plus a <code className="font-mono text-xs">pinned</code> sentinel meaning "never interrupt me." Quantising
           caps the cross-cluster aggregation cardinality at 28 stable bucket labels instead of unbounded floats.
         </p>
 
-        <div className="mt-4 rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+        <div className="mt-4 rounded-md border border-[var(--border)] overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-500 uppercase tracking-wide">
+            <thead className="bg-[var(--surface-2)] text-[var(--text-subtle)] uppercase tracking-wide">
               <tr>
                 <th className="text-left font-medium px-3 py-2">Bucket</th>
                 <th className="text-left font-medium px-3 py-2">Meaning</th>
@@ -115,50 +109,50 @@ function PenaltyBucketExplainer() {
                 <th className="text-left font-medium px-3 py-2">Typical workload</th>
               </tr>
             </thead>
-            <tbody className="text-neutral-700 dark:text-neutral-300">
-              <tr className="border-t border-neutral-200 dark:border-neutral-800">
+            <tbody className="text-[var(--text-muted)]">
+              <tr className="border-t border-[var(--border)]">
                 <td className="font-mono px-3 py-2 align-top">$0</td>
                 <td className="px-3 py-2 align-top">Free to interrupt — retry is cheap.</td>
                 <td className="px-3 py-2 align-top">Whatever is literally cheapest, including Spot.</td>
-                <td className="px-3 py-2 align-top text-neutral-500">Stateless web, idempotent batch.</td>
+                <td className="px-3 py-2 align-top text-[var(--text-subtle)]">Stateless web, idempotent batch.</td>
               </tr>
-              <tr className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr className="border-t border-[var(--border)]">
                 <td className="font-mono px-3 py-2 align-top">$0.50 – $32</td>
                 <td className="px-3 py-2 align-top">Restart has real but small cost.</td>
                 <td className="px-3 py-2 align-top">Spot still OK; OnDemand wins if Spot's interruption probability is non-trivial.</td>
-                <td className="px-3 py-2 align-top text-neutral-500">Short-running CI jobs.</td>
+                <td className="px-3 py-2 align-top text-[var(--text-subtle)]">Short-running CI jobs.</td>
               </tr>
-              <tr className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr className="border-t border-[var(--border)]">
                 <td className="font-mono px-3 py-2 align-top">$64 – $1K</td>
                 <td className="px-3 py-2 align-top">Hours of work lost on interrupt.</td>
                 <td className="px-3 py-2 align-top">Routes away from Spot toward OnDemand / Reserved.</td>
-                <td className="px-3 py-2 align-top text-neutral-500">Long-running services, modest training.</td>
+                <td className="px-3 py-2 align-top text-[var(--text-subtle)]">Long-running services, modest training.</td>
               </tr>
-              <tr className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr className="border-t border-[var(--border)]">
                 <td className="font-mono px-3 py-2 align-top">$1K – $1M</td>
                 <td className="px-3 py-2 align-top">Expensive to restart (SLA breach, retraining cost).</td>
                 <td className="px-3 py-2 align-top">Pulls strongly toward Reserved or BareMetal.</td>
-                <td className="px-3 py-2 align-top text-neutral-500">Large-model training, customer-facing services with tight SLOs.</td>
+                <td className="px-3 py-2 align-top text-[var(--text-subtle)]">Large-model training, customer-facing services with tight SLOs.</td>
               </tr>
-              <tr className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr className="border-t border-[var(--border)]">
                 <td className="font-mono px-3 py-2 align-top">
                   <span className="inline-block px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300">pinned</span>
                 </td>
                 <td className="px-3 py-2 align-top">Cannot be interrupted, ever.</td>
                 <td className="px-3 py-2 align-top">Spot is forbidden by Phase 1. Reserved / OnDemand / BareMetal only.</td>
-                <td className="px-3 py-2 align-top text-neutral-500">Stateful databases, in-flight payment processing.</td>
+                <td className="px-3 py-2 align-top text-[var(--text-subtle)]">Stateful databases, in-flight payment processing.</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="mt-4 text-neutral-800 dark:text-neutral-200">
+        <p className="mt-4 text-[var(--text)]">
           The penalty enters BigFleet's fixed cost formula:
         </p>
-        <pre className="mt-2 rounded-md bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 p-3 text-xs font-mono overflow-x-auto">
+        <pre className="mt-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] p-3 text-xs font-mono overflow-x-auto">
           effective_cost = price + (interruption_probability × interruption_penalty)
         </pre>
-        <p className="mt-3 text-neutral-800 dark:text-neutral-200">
+        <p className="mt-3 text-[var(--text)]">
           The provider declares the <em>price</em> and <em>interruption_probability</em> of each tier; the workload
           declares the <em>interruption_penalty</em>. Phase 1 minimises <em>effective_cost</em> per Need.
         </p>
@@ -176,7 +170,7 @@ function PenaltyBucketExplainer() {
           together — a high bucket is the workload <em>asking</em> the engine to skip cheap-but-flaky capacity.
         </div>
 
-        <p className="mt-4 text-neutral-700 dark:text-neutral-300 text-xs">
+        <p className="mt-4 text-[var(--text-muted)] text-xs">
           <strong>Who sets the penalty:</strong> usually the operator chart's PriorityClass → penalty mapping (e.g.{" "}
           <code className="font-mono">ml-research</code> defaults to <span className="font-mono">$8,192</span>;{" "}
           <code className="font-mono">batch-low</code> to <span className="font-mono">$1</span>). Power users override
@@ -186,7 +180,7 @@ function PenaltyBucketExplainer() {
           are picked when neither is set.
         </p>
 
-        <p className="mt-3 text-neutral-500 text-xs">
+        <p className="mt-3 text-[var(--text-subtle)] text-xs">
           Note: there's a second penalty —{" "}
           <code className="font-mono">reclamationPenalty</code> — that's tied to the <em>specific machine</em> (accrued
           training state, warm caches). The dashboard slices on <em>interruption</em> penalty because that's what
@@ -261,7 +255,7 @@ function PostureSummary({ data }: { data: FinOpsSnapshot }) {
   return (
     <section>
       <h2 className="text-base font-semibold mb-2">Fleet posture</h2>
-      <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 text-sm leading-relaxed text-neutral-800 dark:text-neutral-200">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 text-sm leading-relaxed text-[var(--text)]">
         {sentences.map((s, i) => (
           <p key={i} className={i > 0 ? "mt-2" : ""}>
             {s}
@@ -285,7 +279,7 @@ function KeyMetrics({ data }: { data: FinOpsSnapshot }) {
   return (
     <section>
       <h2 className="text-base font-semibold mb-2">Key numbers</h2>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
+      <p className="text-sm text-[var(--text-muted)] mb-3">
         The headline of your fleet, derived from the queries below.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -349,11 +343,11 @@ function CapacityMixSection({ data }: { data: FinOpsSnapshot }) {
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">Active (Configured)</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--text-subtle)] mb-2">Active (Configured)</div>
           <StackedBar segments={configuredSegs} formatValue={(v) => formatInt(v)} />
         </div>
         <div>
-          <div className="text-xs uppercase tracking-wide text-neutral-500 mb-2">Idle headroom</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--text-subtle)] mb-2">Idle headroom</div>
           <StackedBar segments={idleSegs} formatValue={(v) => formatInt(v)} />
         </div>
       </div>
@@ -367,7 +361,7 @@ function CapacityMixSection({ data }: { data: FinOpsSnapshot }) {
           return (
             <div
               key={ct}
-              className="rounded-md border border-neutral-200 dark:border-neutral-800 p-3"
+              className="rounded-md border border-[var(--border)] p-3"
             >
               <div className="flex items-center gap-2">
                 <span
@@ -377,10 +371,10 @@ function CapacityMixSection({ data }: { data: FinOpsSnapshot }) {
                 <span className="font-mono">{ct}</span>
               </div>
               <div className="mt-1 text-base tabular-nums">{formatInt(sum)}</div>
-              <div className="mt-0.5 text-[11px] text-neutral-500">
+              <div className="mt-0.5 text-[11px] text-[var(--text-subtle)]">
                 {formatInt(conf)} active · {formatInt(idle)} idle
               </div>
-              <p className="mt-2 text-[11px] text-neutral-500 leading-snug">{capacityTypeDescription(ct)}</p>
+              <p className="mt-2 text-[11px] text-[var(--text-subtle)] leading-snug">{capacityTypeDescription(ct)}</p>
             </div>
           );
         })}
@@ -467,15 +461,15 @@ function PenaltyDistributionSection({ data }: { data: FinOpsSnapshot }) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800">
+      <div className="overflow-x-auto rounded-md border border-[var(--border)]">
         <table className="text-xs border-separate border-spacing-px">
-          <thead className="bg-neutral-50 dark:bg-neutral-900/60">
+          <thead className="bg-[var(--surface-2)]">
             <tr>
-              <th className="sticky left-0 bg-neutral-50 dark:bg-neutral-900/60 text-left font-medium text-neutral-500 px-2 py-1">
+              <th className="sticky left-0 bg-[var(--surface-2)] text-left font-medium text-[var(--text-subtle)] px-2 py-1">
                 capacity_type \\ bucket
               </th>
               {data.buckets.map((b) => (
-                <th key={b} className="font-mono text-neutral-500 px-2 py-1 text-right whitespace-nowrap">
+                <th key={b} className="font-mono text-[var(--text-subtle)] px-2 py-1 text-right whitespace-nowrap">
                   {formatPenaltyBucket(b)}
                 </th>
               ))}
@@ -484,7 +478,7 @@ function PenaltyDistributionSection({ data }: { data: FinOpsSnapshot }) {
           <tbody>
             {data.capacityTypes.map((ct) => (
               <tr key={ct}>
-                <th className="sticky left-0 bg-white dark:bg-neutral-900 text-left font-mono font-medium px-2 py-1 whitespace-nowrap">
+                <th className="sticky left-0 bg-[var(--surface)] text-left font-mono font-medium px-2 py-1 whitespace-nowrap">
                   {ct}
                 </th>
                 {data.buckets.map((b) => (
@@ -498,7 +492,7 @@ function PenaltyDistributionSection({ data }: { data: FinOpsSnapshot }) {
               </tr>
             ))}
             <tr>
-              <th className="sticky left-0 bg-white dark:bg-neutral-900 text-left font-mono font-medium text-neutral-500 px-2 py-1 whitespace-nowrap border-t border-neutral-200 dark:border-neutral-800">
+              <th className="sticky left-0 bg-[var(--surface)] text-left font-mono font-medium text-[var(--text-subtle)] px-2 py-1 whitespace-nowrap border-t border-[var(--border)]">
                 demand
               </th>
               {data.buckets.map((b) => {
@@ -506,7 +500,7 @@ function PenaltyDistributionSection({ data }: { data: FinOpsSnapshot }) {
                 return (
                   <td
                     key={b}
-                    className="text-right tabular-nums px-2 py-1 font-mono border-t border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    className="text-right tabular-nums px-2 py-1 font-mono border-t border-[var(--border)] text-[var(--text-muted)]"
                   >
                     {v > 0 ? formatInt(v) : ""}
                   </td>
@@ -580,10 +574,10 @@ function DemandVsSupplySection({ data }: { data: FinOpsSnapshot }) {
       promql='Demand: sum by (interruption_penalty_bucket) (bigfleet_shard_demand_machines) · Supply: sum by (interruption_penalty_bucket) (bigfleet_shard_inventory_machines{state="Configured"})'
     >
       {rows.length === 0 ? (
-        <div className="text-xs text-neutral-500">no demand or configured supply</div>
+        <div className="text-xs text-[var(--text-subtle)]">no demand or configured supply</div>
       ) : (
         <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-[80px_1fr_80px] items-center gap-3 text-[10px] uppercase tracking-wide text-neutral-500">
+          <div className="grid grid-cols-[80px_1fr_80px] items-center gap-3 text-[10px] uppercase tracking-wide text-[var(--text-subtle)]">
             <div className="text-right">Bucket</div>
             <div>
               <span className="inline-flex items-center gap-1 mr-3">
@@ -604,13 +598,13 @@ function DemandVsSupplySection({ data }: { data: FinOpsSnapshot }) {
                 ? "text-red-600 dark:text-red-400"
                 : gap > r.demand * 2
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-neutral-500";
+                : "text-[var(--text-subtle)]";
             return (
               <div
                 key={r.bucket}
                 className="grid grid-cols-[80px_1fr_80px] items-center gap-3 text-xs"
               >
-                <div className="font-mono text-neutral-500 text-right">{formatPenaltyBucket(r.bucket)}</div>
+                <div className="font-mono text-[var(--text-subtle)] text-right">{formatPenaltyBucket(r.bucket)}</div>
                 <div className="space-y-0.5">
                   <Bar value={r.demand} max={max} colour="#f59e0b" label={`demand ${formatInt(r.demand)}`} />
                   <Bar value={r.supply} max={max} colour="#3b82f6" label={`supply ${formatInt(r.supply)}`} />
@@ -639,7 +633,7 @@ function Bar({ value, max, colour, label }: { value: number; max: number; colour
   const pct = max > 0 ? Math.max(2, (value / max) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
-      <div className="h-3 flex-1 rounded-sm bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+      <div className="h-3 flex-1 rounded-sm bg-[var(--surface-2)] overflow-hidden">
         <div className="h-full" style={{ width: `${pct}%`, backgroundColor: colour }} title={label} />
       </div>
     </div>
@@ -692,21 +686,21 @@ function DecisionEngineSection({ data }: { data: FinOpsSnapshot }) {
 function Glossary() {
   const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between p-4 text-left text-sm font-semibold"
       >
         <span>Glossary</span>
-        <span className="text-neutral-400">{open ? "−" : "+"}</span>
+        <span className="text-[var(--text-subtle)]">{open ? "−" : "+"}</span>
       </button>
       {open && (
         <dl className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           {GLOSSARY.map(({ term, body }) => (
             <div key={term}>
-              <dt className="font-mono text-xs uppercase tracking-wide text-neutral-500">{term}</dt>
-              <dd className="mt-0.5 text-neutral-700 dark:text-neutral-300">{body}</dd>
+              <dt className="font-mono text-xs uppercase tracking-wide text-[var(--text-subtle)]">{term}</dt>
+              <dd className="mt-0.5 text-[var(--text-muted)]">{body}</dd>
             </div>
           ))}
         </dl>
@@ -763,12 +757,12 @@ function Section({
     <section>
       <header className="mb-3">
         <h2 className="text-base font-semibold">{title}</h2>
-        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">{lede}</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)] leading-relaxed">{lede}</p>
         {promql && (
-          <p className="mt-1.5 text-xs font-mono text-neutral-400 dark:text-neutral-500 break-all">{promql}</p>
+          <p className="mt-1.5 text-xs font-mono text-[var(--text-subtle)] break-all">{promql}</p>
         )}
       </header>
-      <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
         {children}
       </div>
     </section>
@@ -777,9 +771,9 @@ function Section({
 
 function Interpretation({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="mt-4 rounded-md bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 p-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500 mb-1.5">{title}</div>
-      <ul className="space-y-1 text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed list-disc list-inside">
+    <div className="mt-4 rounded-md bg-[var(--surface-2)] border border-[var(--border)] p-3">
+      <div className="text-xs uppercase tracking-wide text-[var(--text-subtle)] mb-1.5">{title}</div>
+      <ul className="space-y-1 text-xs text-[var(--text-muted)] leading-relaxed list-disc list-inside">
         {items.map((it, i) => (
           <li key={i}>{it}</li>
         ))}

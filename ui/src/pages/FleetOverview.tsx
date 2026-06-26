@@ -7,6 +7,7 @@ import { formatDuration, formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import Sparkline from "../components/Sparkline";
 import Tile from "../components/Tile";
+import Card from "../components/Card";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 import GrafanaPanel, { GrafanaLink } from "../components/GrafanaPanel";
@@ -35,21 +36,14 @@ export default function FleetOverview() {
 
   return (
     <>
-      <PageHeader
-        title="Fleet overview"
-        subtitle="Aggregate health across every shard and cluster."
-      />
+      <PageHeader title="Fleet overview" subtitle="Aggregate health across every shard and cluster." />
 
       {!cfg.isLoading && !wired && <UnwiredNotice />}
 
       {wired && (
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <Tiles data={overview.data} error={overview.error as Error | null} loading={overview.isLoading} />
-          <ActionsCard
-            data={actions.data}
-            error={actions.error as Error | null}
-            loading={actions.isLoading}
-          />
+          <ActionsCard data={actions.data} error={actions.error as Error | null} loading={actions.isLoading} />
           <GrafanaSection grafanaUrl={cfg.data?.grafanaUrl} />
         </div>
       )}
@@ -57,88 +51,48 @@ export default function FleetOverview() {
   );
 }
 
-// GrafanaSection embeds the scale dashboard's timeseries panels (which
-// already nail these) instead of re-rendering them in React. Renders
-// nothing unless --grafana-url is set.
 function GrafanaSection({ grafanaUrl }: { grafanaUrl: string | undefined }) {
   if (!grafanaUrl) return null;
   return (
-    <section>
-      <header className="flex items-baseline justify-between mb-3">
-        <div>
-          <h2 className="text-sm font-semibold">Grafana — scale dashboard</h2>
-          <p className="text-xs text-neutral-500">
-            Embedded panels from the BigFleet scale dashboard (<code className="font-mono">{SCALE_DASHBOARD_UID}</code>).
-          </p>
-        </div>
-        <GrafanaLink grafanaUrl={grafanaUrl} uid={SCALE_DASHBOARD_UID} slug={SCALE_DASHBOARD_SLUG} />
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <GrafanaPanel
-          grafanaUrl={grafanaUrl}
-          uid={SCALE_DASHBOARD_UID}
-          slug={SCALE_DASHBOARD_SLUG}
-          panelId={2}
-          title="CR creates / sec"
-        />
-        <GrafanaPanel
-          grafanaUrl={grafanaUrl}
-          uid={SCALE_DASHBOARD_UID}
-          slug={SCALE_DASHBOARD_SLUG}
-          panelId={96}
-          title="Pod binds cumulative vs target"
-        />
+    <Card
+      title="Grafana — scale dashboard"
+      subtitle={`embedded panels from ${SCALE_DASHBOARD_UID}`}
+      right={<GrafanaLink grafanaUrl={grafanaUrl} uid={SCALE_DASHBOARD_UID} slug={SCALE_DASHBOARD_SLUG} />}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <GrafanaPanel grafanaUrl={grafanaUrl} uid={SCALE_DASHBOARD_UID} slug={SCALE_DASHBOARD_SLUG} panelId={2} title="CR creates / sec" />
+        <GrafanaPanel grafanaUrl={grafanaUrl} uid={SCALE_DASHBOARD_UID} slug={SCALE_DASHBOARD_SLUG} panelId={96} title="Pod binds cumulative vs target" />
       </div>
-    </section>
+    </Card>
   );
 }
 
-function Tiles({
-  data,
-  error,
-  loading,
-}: {
-  data: FleetOverviewData | undefined;
-  error: Error | null;
-  loading: boolean;
-}) {
+function Tiles({ data, error, loading }: { data: FleetOverviewData | undefined; error: Error | null; loading: boolean }) {
   if (error) return <ErrorBox error={error} />;
 
   const ov = data;
-  const byState = ov?.machinesByState ?? {};
-  const stateSummary = Object.entries(byState)
+  const stateSummary = Object.entries(ov?.machinesByState ?? {})
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
     .map(([k, v]) => `${k} ${formatInt(v)}`)
     .join(" · ");
 
-  const shortfallTone = (ov?.shortfalls ?? 0) > 0 ? "danger" : "neutral";
-  const cycleTone =
-    ov && ov.cycleP99Seconds > 5 ? "danger" : ov && ov.cycleP99Seconds > 1 ? "warn" : "neutral";
+  const shortfallTone = (ov?.shortfalls ?? 0) > 0 ? "danger" : "good";
+  const cycleTone = ov && ov.cycleP99Seconds > 5 ? "danger" : ov && ov.cycleP99Seconds > 1 ? "warn" : "good";
 
   return (
-    <section>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Tile label="Shards" value={loading ? "…" : formatInt(ov?.shards)} />
-        <Tile label="Clusters" value={loading ? "…" : formatInt(ov?.clusters)} />
-        <Tile
-          label="Machines"
-          value={loading ? "…" : formatInt(ov?.machines)}
-          subtitle={stateSummary || undefined}
-        />
-        <Tile
-          label="Shortfalls"
-          value={loading ? "…" : formatInt(ov?.shortfalls)}
-          tone={shortfallTone}
-        />
-        <Tile
-          label="Cycle p99 (worst shard)"
-          value={loading ? "…" : formatDuration(ov?.cycleP99Seconds)}
-          tone={cycleTone}
-        />
-      </div>
-    </section>
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <Tile label="Shards" value={loading ? "…" : formatInt(ov?.shards)} />
+      <Tile label="Clusters" value={loading ? "…" : formatInt(ov?.clusters)} />
+      <Tile label="Machines" value={loading ? "…" : formatInt(ov?.machines)} subtitle={stateSummary || undefined} />
+      <Tile label="Shortfalls" value={loading ? "…" : formatInt(ov?.shortfalls)} tone={loading ? "neutral" : shortfallTone} />
+      <Tile
+        label="Cycle p99 (worst shard)"
+        value={loading ? "…" : formatDuration(ov?.cycleP99Seconds)}
+        tone={loading ? "neutral" : cycleTone}
+      />
+    </div>
   );
 }
 
@@ -153,15 +107,7 @@ function colourFor(kind: string, idx: number): string {
   return kindColours[kind] ?? ["#0891b2", "#7c3aed", "#db2777", "#65a30d"][idx % 4] ?? "#888";
 }
 
-function ActionsCard({
-  data,
-  error,
-  loading,
-}: {
-  data: FleetActionsSeries | undefined;
-  error: Error | null;
-  loading: boolean;
-}) {
+function ActionsCard({ data, error, loading }: { data: FleetActionsSeries | undefined; error: Error | null; loading: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -176,59 +122,36 @@ function ActionsCard({
     return () => ro.disconnect();
   }, []);
 
-  const { aligned, seriesConfig } = useMemo<{
-    aligned: AlignedData | null;
-    seriesConfig: Series[];
-  }>(() => {
-    if (!data || data.timestamps.length === 0) {
-      return { aligned: null, seriesConfig: [{}] };
-    }
+  const { aligned, seriesConfig } = useMemo<{ aligned: AlignedData | null; seriesConfig: Series[] }>(() => {
+    if (!data || data.timestamps.length === 0) return { aligned: null, seriesConfig: [{}] };
     const aligned: AlignedData = [data.timestamps, ...data.values];
     const seriesConfig: Series[] = [
       {},
-      ...data.kinds.map((kind, idx) => ({
-        label: kind,
-        stroke: colourFor(kind, idx),
-        width: 1.5,
-        points: { show: false },
-      })),
+      ...data.kinds.map((kind, idx) => ({ label: kind, stroke: colourFor(kind, idx), width: 1.5, points: { show: false } })),
     ];
     return { aligned, seriesConfig };
   }, [data]);
 
-  return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">Action rate by kind</h2>
-          <p className="text-xs text-neutral-500">
-            <code className="font-mono">sum by (kind) (rate(bigfleet_shard_actions_total[5m]))</code> · last hour
-          </p>
-        </div>
-        {data && data.kinds.length > 0 && (
-          <div className="flex flex-wrap gap-3 text-xs">
-            {data.kinds.map((k, i) => (
-              <span key={k} className="inline-flex items-center gap-1.5">
-                <span
-                  className="inline-block h-2 w-3 rounded-sm"
-                  style={{ backgroundColor: colourFor(k, i) }}
-                />
-                {k}
-              </span>
-            ))}
-          </div>
-        )}
-      </header>
-      <div ref={containerRef} className="mt-3 h-48">
-        {error && <ErrorBox error={error} />}
-        {!error && loading && <div className="text-xs text-neutral-500">Loading…</div>}
-        {!error && !loading && aligned && width > 0 && (
-          <Sparkline data={aligned} series={seriesConfig} width={width} height={180} />
-        )}
-        {!error && !loading && !aligned && (
-          <div className="text-xs text-neutral-500">No action activity in the last hour.</div>
-        )}
+  const legend =
+    data && data.kinds.length > 0 ? (
+      <div className="flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
+        {data.kinds.map((k, i) => (
+          <span key={k} className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-2 w-3 rounded-sm" style={{ backgroundColor: colourFor(k, i) }} />
+            {k}
+          </span>
+        ))}
       </div>
-    </section>
+    ) : null;
+
+  return (
+    <Card title="Action rate by kind" subtitle="sum by (kind) (rate(bigfleet_shard_actions_total[5m])) · last hour" right={legend}>
+      <div ref={containerRef} className="h-48">
+        {error && <ErrorBox error={error} />}
+        {!error && loading && <div className="text-sm text-[var(--text-muted)]">Loading…</div>}
+        {!error && !loading && aligned && width > 0 && <Sparkline data={aligned} series={seriesConfig} width={width} height={180} />}
+        {!error && !loading && !aligned && <div className="text-sm text-[var(--text-muted)]">No action activity in the last hour.</div>}
+      </div>
+    </Card>
   );
 }

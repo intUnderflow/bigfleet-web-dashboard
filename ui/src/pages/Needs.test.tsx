@@ -29,6 +29,7 @@ function renderWithProviders(ui: ReactElement) {
 }
 
 const coordinatorHealth = { raftTerm: 1, applyRatePerSec: 0, applyErrorRatePerSec: 0, pendingInstructionsTotal: 0 };
+const oneShard = [{ shardId: "shard-a", address: "", registeredAtUnixSec: 0, lastHeartbeatUnixSec: 0, pendingInstructions: 0 }];
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -44,16 +45,15 @@ describe("Needs explorer", () => {
     expect(await screen.findByText(/--coordinator-addr/)).toBeInTheDocument();
   });
 
-  it("defaults to the first shard and renders its needs with reasons", async () => {
+  it("scopes to the first cluster and shows a humanized unmet reason", async () => {
     vi.stubGlobal(
       "fetch",
       routeFetch({
         "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
         "/api/topology": {
           coordinator: coordinatorHealth,
-          shards: [{ shardId: "shard-a", address: "", registeredAtUnixSec: 0, lastHeartbeatUnixSec: 0, pendingInstructions: 0 }],
+          shards: oneShard,
           domainAssignments: [],
-          quotas: [],
           queriedAt: "",
         },
         "/api/needs": {
@@ -84,14 +84,18 @@ describe("Needs explorer", () => {
       }),
     );
     renderWithProviders(<Needs />);
-    expect(await screen.findByText("payments")).toBeInTheDocument();
-    expect(await screen.findByText("PRIORITY_STARVED")).toBeInTheDocument();
+    // The cluster appears as a selectable scope (option text "payments (1 · 1 unmet)").
+    expect(await screen.findByText(/payments/)).toBeInTheDocument();
+    // The raw enum is humanized; it shows in both the status pill and the summary bar.
+    expect((await screen.findAllByText("priority-starved")).length).toBeGreaterThan(0);
+    // The demand cell renders the wanted resources compactly.
+    expect(await screen.findByText("8 cpu")).toBeInTheDocument();
   });
 
-  it("windows a large needs list rather than mounting every row", async () => {
+  it("windows a large single-cluster needs list rather than mounting every row", async () => {
     const many = Array.from({ length: 400 }, (_, i) => ({
-      clusterId: `c${i}`,
-      priority: 1000,
+      clusterId: "big-cluster",
+      priority: 1000 + i,
       aggregateResources: { cpu: "1" },
       interruptionPenaltyBucket: "1",
       reclamationPenaltyBucket: "0",
@@ -109,19 +113,18 @@ describe("Needs explorer", () => {
       routeFetch({
         "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
         "/api/topology": {
-          coordinator: { raftTerm: 1, applyRatePerSec: 0, applyErrorRatePerSec: 0, pendingInstructionsTotal: 0 },
-          shards: [{ shardId: "shard-a", address: "", registeredAtUnixSec: 0, lastHeartbeatUnixSec: 0, pendingInstructions: 0 }],
+          coordinator: coordinatorHealth,
+          shards: oneShard,
           domainAssignments: [],
-          quotas: [],
           queriedAt: "",
         },
         "/api/needs": { shardId: "shard-a", cycle: 1, computedAtUnixNanos: 0, totalNeeds: 400, needs: many },
       }),
     );
     renderWithProviders(<Needs />);
-    // The header renders (the virtualized path mounted) ...
-    expect(await screen.findByText("Cluster")).toBeInTheDocument();
-    // ... but far fewer than all 400 cluster cells are in the DOM.
-    await waitFor(() => expect(screen.queryAllByText(/^c\d+$/).length).toBeLessThan(400));
+    // The table header renders (table mounted) ...
+    expect(await screen.findByText("Status")).toBeInTheDocument();
+    // ... but far fewer than all 400 status pills are in the DOM (windowed).
+    await waitFor(() => expect(screen.queryAllByText("satisfied").length).toBeLessThan(400));
   });
 });

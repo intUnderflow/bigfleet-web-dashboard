@@ -1,22 +1,37 @@
 import type { ReactNode } from "react";
 
-/** A titled bordered section. Shared by the topology / detail pages. */
+/** A titled surface section. `subtitle` renders as a small mono caption
+ *  (handy for the PromQL / RPC each card is backed by). `right` is an
+ *  optional header-aligned slot for actions. */
 export default function Card({
   title,
   subtitle,
+  right,
   children,
+  className = "",
 }: {
-  title: string;
-  subtitle?: string;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  right?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4">
-      <header className="mb-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-neutral-500 font-mono mt-0.5">{subtitle}</p>}
-      </header>
-      {children}
+    <section
+      className={`rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)] ${className}`}
+    >
+      {(title || right) && (
+        <header className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="min-w-0">
+            {title && <h2 className="text-sm font-semibold text-[var(--text)]">{title}</h2>}
+            {subtitle && (
+              <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-subtle)]">{subtitle}</p>
+            )}
+          </div>
+          {right && <div className="shrink-0">{right}</div>}
+        </header>
+      )}
+      <div className="px-5 pb-5">{children}</div>
     </section>
   );
 }

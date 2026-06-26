@@ -1,18 +1,105 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Semantic CSS variables (surfaces / text / accent) switch on
+ * the OS colour scheme; components reference them via bg-[var(--surface)] etc.
+ * so light + dark stay cohesive from one place. Status colours live in the
+ * Badge component (Tailwind palette + dark: variants).
+ */
 :root {
   color-scheme: light dark;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f4f6;
+  --surface-3: #e9ecef;
+  --border: #e6e8eb;
+  --border-strong: #d3d8dd;
+
+  --text: #14171c;
+  --text-muted: #58606b;
+  --text-subtle: #899099;
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-fg: #ffffff;
+  --accent-soft: #eef1ff;
+  --accent-soft-fg: #4338ca;
+
+  --ring: #6366f1;
+  --shadow-sm: 0 1px 2px 0 rgb(15 18 22 / 0.05), 0 1px 3px 0 rgb(15 18 22 / 0.06);
+  --shadow-md: 0 6px 16px -4px rgb(15 18 22 / 0.10), 0 2px 6px -3px rgb(15 18 22 / 0.07);
+  --shadow-lg: 0 16px 40px -8px rgb(15 18 22 / 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0c0f;
+    --surface: #14171c;
+    --surface-2: #1a1e24;
+    --surface-3: #21262d;
+    --border: #262b32;
+    --border-strong: #343b44;
+
+    --text: #e7eaee;
+    --text-muted: #98a0ab;
+    --text-subtle: #6a727c;
+
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-fg: #ffffff;
+    --accent-soft: #1f1d3d;
+    --accent-soft-fg: #c7cbff;
+
+    --ring: #6366f1;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+    --shadow-md: 0 6px 18px -5px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 20px 50px -10px rgb(0 0 0 / 0.6);
+  }
 }
 
 html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: #fafafa;
-  color: #1a1a1a;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-@media (prefers-color-scheme: dark) {
-  body { background: #0b0c0f; color: #e6e6e6; }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
+
+/* Shared form-control look (selects, text inputs). */
+.bf-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.bf-input:hover { border-color: var(--border-strong); }
+.bf-input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent);
+}
+
+@keyframes bf-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes bf-slide-in { from { transform: translateX(16px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+.bf-overlay { animation: bf-fade-in 0.12s ease-out; }
+.bf-drawer { animation: bf-slide-in 0.16s cubic-bezier(0.22, 1, 0.36, 1); }

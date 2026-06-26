@@ -14,28 +14,27 @@ export default function StackedBar({ segments, total, formatValue }: Props) {
   const sum = total ?? segments.reduce((s, x) => s + x.value, 0);
   const visible = segments.filter((s) => s.value > 0);
   if (visible.length === 0 || sum === 0) {
-    return <div className="text-xs text-neutral-500">empty</div>;
+    return <div className="text-xs text-[var(--text-subtle)]">No data.</div>;
   }
+  const fmt = (v: number) => (formatValue ? formatValue(v) : v.toLocaleString());
   return (
     <div>
-      <div className="flex h-3 w-full overflow-hidden rounded-md border border-neutral-200 dark:border-neutral-800">
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
         {visible.map((s) => (
           <div
             key={s.label}
-            className="h-full"
+            className="h-full first:rounded-l-full last:rounded-r-full"
             style={{ width: `${(s.value / sum) * 100}%`, backgroundColor: s.colour }}
-            title={`${s.label}: ${formatValue ? formatValue(s.value) : s.value.toLocaleString()}`}
+            title={`${s.label}: ${fmt(s.value)}`}
           />
         ))}
       </div>
-      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
         {visible.map((s) => (
           <li key={s.label} className="inline-flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: s.colour }} />
-            <span className="text-neutral-700 dark:text-neutral-300">{s.label}</span>
-            <span className="tabular-nums text-neutral-500">
-              {formatValue ? formatValue(s.value) : s.value.toLocaleString()}
-            </span>
+            <span className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: s.colour }} />
+            <span className="text-[var(--text-muted)]">{s.label}</span>
+            <span className="tabular-nums font-medium text-[var(--text)]">{fmt(s.value)}</span>
           </li>
         ))}
       </ul>

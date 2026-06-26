@@ -5,13 +5,15 @@ import { formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
+import EmptyState from "../components/EmptyState";
 import Card from "../components/Card";
+import Badge, { type Tone } from "../components/Badge";
 
-const availabilityStyle: Record<string, string> = {
-  High: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
-  Medium: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-  Low: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
-  None: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+const availabilityTone: Record<string, Tone> = {
+  High: "good",
+  Medium: "info",
+  Low: "warn",
+  None: "neutral",
 };
 
 function resStr(m: Record<string, string> | undefined): string {
@@ -43,25 +45,21 @@ export default function AvailableCapacity() {
 
       {!cfg.isLoading && !wired && <UnwiredNotice source="Kubeconfig" flag="--kubeconfig" />}
 
-      {wired && avc.error && (
-        <div className="mt-6">
-          <ErrorBox error={avc.error as Error} />
-        </div>
-      )}
+      {wired && avc.error && <ErrorBox error={avc.error as Error} />}
 
       {wired && !avc.error && avc.data && clusters.length === 0 && (
-        <div className="mt-6 text-xs text-neutral-500">No managed clusters in the kubeconfig.</div>
+        <EmptyState title="No managed clusters">No contexts found in the kubeconfig.</EmptyState>
       )}
 
       {wired && !avc.error && avc.data && clusters.length > 0 && !anyItems && (
-        <div className="mt-6 text-xs text-neutral-500">
-          No AvailableCapacity hints published yet — shards emit these as an eventually-consistent
-          signal, so they appear once a shard has surplus it could offer.
-        </div>
+        <EmptyState title="No capacity hints yet">
+          Shards emit AvailableCapacity as an eventually-consistent signal — hints appear once a shard has
+          surplus it could offer.
+        </EmptyState>
       )}
 
       {wired && !avc.error && (
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           {clusters
             .filter((c) => c.items.length > 0 || c.error)
             .map((c) => (
@@ -75,43 +73,41 @@ export default function AvailableCapacity() {
 
 function ClusterCard({ cluster }: { cluster: AvailableCapacityCluster }) {
   return (
-    <Card title={cluster.id} subtitle={cluster.error ? undefined : `${cluster.items.length} hint(s)`}>
+    <Card
+      title={<span className="font-mono">{cluster.id}</span>}
+      subtitle={cluster.error ? undefined : `${cluster.items.length} hint(s)`}
+    >
       {cluster.error ? (
-        <div className="text-xs text-red-600">{cluster.error}</div>
+        <Badge tone="danger" dot>
+          {cluster.error}
+        </Badge>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="text-xs uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="text-left font-medium py-1">Name</th>
-              <th className="text-left font-medium py-1">Resources</th>
-              <th className="text-right font-medium py-1">Available</th>
-              <th className="text-left font-medium py-1 pl-4">Availability</th>
-              <th className="text-right font-medium py-1">Cost/hr</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cluster.items.map((it) => {
-              const cls =
-                availabilityStyle[it.availability] ??
-                "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400";
-              return (
-                <tr key={it.name} className="border-t border-neutral-100 dark:border-neutral-800">
-                  <td className="py-1 font-mono text-xs">{it.name}</td>
-                  <td className="py-1 font-mono text-xs text-neutral-500">{resStr(it.resources)}</td>
-                  <td className="py-1 text-right tabular-nums">{formatInt(it.availableCount)}</td>
-                  <td className="py-1 pl-4">
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-xs ${cls}`}>
-                      {it.availability || "—"}
-                    </span>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-[var(--text-subtle)]">
+              <tr>
+                <th className="py-1.5 text-left font-semibold">Name</th>
+                <th className="py-1.5 text-left font-semibold">Resources</th>
+                <th className="py-1.5 text-right font-semibold">Available</th>
+                <th className="py-1.5 pl-4 text-left font-semibold">Availability</th>
+                <th className="py-1.5 text-right font-semibold">Cost/hr</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cluster.items.map((it) => (
+                <tr key={it.name} className="border-t border-[var(--border)]">
+                  <td className="py-1.5 font-mono text-xs text-[var(--text)]">{it.name}</td>
+                  <td className="py-1.5 font-mono text-xs text-[var(--text-muted)]">{resStr(it.resources)}</td>
+                  <td className="py-1.5 text-right tabular-nums">{formatInt(it.availableCount)}</td>
+                  <td className="py-1.5 pl-4">
+                    <Badge tone={availabilityTone[it.availability] ?? "neutral"}>{it.availability || "—"}</Badge>
                   </td>
-                  <td className="py-1 text-right tabular-nums font-mono text-xs">
-                    {it.cost ? `$${it.cost}` : "—"}
-                  </td>
+                  <td className="py-1.5 text-right font-mono text-xs tabular-nums">{it.cost ? `$${it.cost}` : "—"}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Card>
   );

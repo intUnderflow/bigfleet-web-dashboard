@@ -27,9 +27,9 @@ export default function ClusterDetail() {
     <>
       <PageHeader
         title={
-          <span className="font-mono text-base">
-            <Link to="/clusters" className="text-neutral-500 hover:underline">clusters</Link>
-            <span className="text-neutral-400"> / </span>
+          <span className="font-mono">
+            <Link to="/clusters" className="text-[var(--text-muted)] hover:underline">clusters</Link>
+            <span className="text-[var(--text-subtle)]"> / </span>
             <span>{id}</span>
           </span>
         }
@@ -38,15 +38,11 @@ export default function ClusterDetail() {
 
       {!cfg.isLoading && !wired && <UnwiredNotice source="Kubeconfig" flag="--kubeconfig" />}
 
-      {wired && detail.error && (
-        <div className="mt-6">
-          <ErrorBox error={detail.error as Error} />
-        </div>
-      )}
+      {wired && detail.error && <ErrorBox error={detail.error as Error} />}
 
       {wired && !detail.error && detail.data && <Detail data={detail.data} />}
       {wired && !detail.error && !detail.data && (
-        <div className="mt-6 text-xs text-neutral-500">Loading…</div>
+        <div className="text-sm text-[var(--text-muted)]">Loading…</div>
       )}
     </>
   );
@@ -68,7 +64,7 @@ function Detail({ data }: { data: ClusterDetailData }) {
   const failedCount = data.upcomingNodesByPhase?.Failed ?? 0;
 
   return (
-    <div className="mt-6 flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Tile label="CapacityRequests" value={formatInt(data.capacityRequestsTotal)} />
         <Tile

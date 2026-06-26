@@ -6,6 +6,8 @@ import { formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
+import Badge from "../components/Badge";
+import { TableShell, THead, TH, TR, TD, MessageRow } from "../components/Table";
 
 export default function ClustersList() {
   const cfg = useConfig();
@@ -24,75 +26,57 @@ export default function ClustersList() {
 
       {!cfg.isLoading && !wired && <UnwiredNotice source="Kubeconfig" flag="--kubeconfig" />}
 
-      {wired && clusters.error && (
-        <div className="mt-6">
-          <ErrorBox error={clusters.error as Error} />
-        </div>
-      )}
+      {wired && clusters.error && <ErrorBox error={clusters.error as Error} />}
 
       {wired && !clusters.error && (
-        <section className="mt-6 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="text-left font-medium px-4 py-2">Cluster</th>
-                <th className="text-right font-medium px-4 py-2">CRs</th>
-                <th className="text-right font-medium px-4 py-2">Pending</th>
-                <th className="text-right font-medium px-4 py-2">UpcomingNodes</th>
-                <th className="text-left font-medium px-4 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clusters.isLoading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-xs text-neutral-500">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {clusters.data && clusters.data.clusters.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-xs text-neutral-500">
-                    No contexts found in the kubeconfig.
-                  </td>
-                </tr>
-              )}
-              {clusters.data?.clusters.map((c) => {
-                const pendingTone =
-                  c.capacityRequestsPending > 0
-                    ? "text-amber-600 dark:text-amber-400 font-medium"
-                    : "text-neutral-500";
-                return (
-                  <tr
-                    key={c.id}
-                    className="border-t border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/60"
+        <TableShell>
+          <THead>
+            <tr>
+              <TH>Cluster</TH>
+              <TH right>CRs</TH>
+              <TH right>Pending</TH>
+              <TH right>UpcomingNodes</TH>
+              <TH>Status</TH>
+            </tr>
+          </THead>
+          <tbody>
+            {clusters.isLoading && <MessageRow colSpan={5}>Loading…</MessageRow>}
+            {clusters.data && clusters.data.clusters.length === 0 && (
+              <MessageRow colSpan={5}>No contexts found in the kubeconfig.</MessageRow>
+            )}
+            {clusters.data?.clusters.map((c) => (
+              <TR key={c.id} hover>
+                <TD mono>
+                  <Link
+                    to={`/clusters/${encodeURIComponent(c.id)}`}
+                    className="font-medium text-[var(--accent)] hover:underline"
                   >
-                    <td className="px-4 py-2 font-mono text-xs">
-                      <Link
-                        to={`/clusters/${encodeURIComponent(c.id)}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {c.id}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {c.error ? "—" : formatInt(c.capacityRequests)}
-                    </td>
-                    <td className={`px-4 py-2 text-right tabular-nums ${pendingTone}`}>
-                      {c.error ? "—" : formatInt(c.capacityRequestsPending)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {c.error ? "—" : formatInt(c.upcomingNodes)}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-neutral-500">
-                      {c.error ? <span className="text-red-600">{c.error}</span> : "ok"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
+                    {c.id}
+                  </Link>
+                </TD>
+                <TD right muted={!!c.error}>{c.error ? "—" : formatInt(c.capacityRequests)}</TD>
+                <TD
+                  right
+                  className={c.capacityRequestsPending > 0 ? "font-medium text-amber-600 dark:text-amber-400" : "text-[var(--text-muted)]"}
+                >
+                  {c.error ? "—" : formatInt(c.capacityRequestsPending)}
+                </TD>
+                <TD right muted={!!c.error}>{c.error ? "—" : formatInt(c.upcomingNodes)}</TD>
+                <TD>
+                  {c.error ? (
+                    <Badge tone="danger" dot>
+                      {c.error}
+                    </Badge>
+                  ) : (
+                    <Badge tone="good" dot>
+                      ok
+                    </Badge>
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </tbody>
+        </TableShell>
       )}
     </>
   );

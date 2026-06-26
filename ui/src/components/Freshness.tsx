@@ -32,7 +32,7 @@ export default function Freshness({
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs ${
-        stale ? "text-amber-700 dark:text-amber-400" : "text-neutral-500"
+        stale ? "text-amber-700 dark:text-amber-400" : "text-[var(--text-muted)]"
       }`}
     >
       <Dot className={stale ? "bg-amber-500" : "bg-emerald-500"} />
