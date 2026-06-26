@@ -14,6 +14,7 @@ import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
 import Tile from "../components/Tile";
 import Card from "../components/Card";
+import Freshness from "../components/Freshness";
 
 export default function Topology() {
   const cfg = useConfig();
@@ -159,7 +160,6 @@ function ShardReportsCard({ reports }: { reports: ShardReport[] | undefined }) {
       </Card>
     );
   }
-  const nowSec = Date.now() / 1000;
   return (
     <Card title="Shard reports" subtitle={subtitle}>
       {reports.length === 0 ? (
@@ -189,9 +189,11 @@ function ShardReportsCard({ reports }: { reports: ShardReport[] | undefined }) {
                     >
                       {r.shardId}
                     </Link>
-                    <span className="text-xs tabular-nums text-neutral-500 text-right">
-                      {formatInt(free)} free / {formatInt(total)} machines · cycle{" "}
-                      {formatInt(r.cycle)} · {formatRelative(r.receivedAtUnixNs / 1e9, nowSec)}
+                    <span className="flex items-center gap-2 text-xs tabular-nums text-neutral-500 text-right">
+                      <span>
+                        {formatInt(free)} free / {formatInt(total)} machines
+                      </span>
+                      <Freshness unixNanos={r.receivedAtUnixNs} cycle={r.cycle} staleAfterSec={20} />
                     </span>
                   </div>
 

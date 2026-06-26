@@ -32,6 +32,9 @@ Go endpoint + React page + tests, green CI before the next one starts.
 The adoption + audit punch-list above.
 
 ### v0.2 — Observability depth
+- **Needs Explorer.** ✓ done (ADR-0061) — a `/needs` view over a new general-purpose shard-side
+  `ShardRead.InspectNeeds` RPC: a shard's per-Need last-cycle verdict (satisfied vs unmet + a
+  colour-coded reason). The deepest observability slice; shipped ahead of the rest of v0.2.
 - **Shard-reports drilldown.** The Topology card exists; add a `/shard-reports` view (or expand the
   card) with per-shard zone breakdown and a shortfall list sortable by priority / penalty bucket /
   age, plus an explicit "follower / rebuilding after failover" state.

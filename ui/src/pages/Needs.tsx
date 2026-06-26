@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useConfig } from "../lib/useConfig";
 import { api, type NeedView } from "../lib/api";
-import { formatInt, formatRelative } from "../lib/format";
+import { formatInt } from "../lib/format";
 import PageHeader from "../components/PageHeader";
 import UnwiredNotice from "../components/UnwiredNotice";
 import ErrorBox from "../components/ErrorBox";
+import Freshness from "../components/Freshness";
 
 function resStr(m: Record<string, string> | undefined): string {
   if (!m) return "—";
@@ -106,12 +107,16 @@ export default function Needs() {
             />
           </label>
           {needs.data && (
-            <div className="text-xs text-neutral-500">
-              cycle {formatInt(needs.data.cycle)} ·{" "}
-              {needs.data.computedAtUnixNanos > 0
-                ? formatRelative(needs.data.computedAtUnixNanos / 1e9)
-                : "—"}{" "}
-              · {formatInt(rows.length)}/{formatInt(needs.data.totalNeeds)} needs
+            <div className="flex items-center gap-2 text-xs text-neutral-500">
+              <Freshness
+                unixNanos={needs.data.computedAtUnixNanos}
+                cycle={needs.data.cycle}
+                staleAfterSec={20}
+                emptyLabel="rebuilding (no cycle yet)"
+              />
+              <span>
+                · {formatInt(rows.length)}/{formatInt(needs.data.totalNeeds)} needs
+              </span>
             </div>
           )}
         </div>
