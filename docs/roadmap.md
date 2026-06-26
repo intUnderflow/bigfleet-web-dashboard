@@ -14,6 +14,13 @@ Go endpoint + React page + tests, green CI before the next one starts.
   consumed, golangci-lint + eslint + vitest gates, reproducible release pin (`BIGFLEET_REF`),
   hardened Helm (read-only-rootfs, nonroot, reader RBAC), a NaN/Inf JSON fix, and a docs honesty
   pass. CI green.
+- **v0.2 → v1.0 done** — observability depth (Needs Explorer, freshness banners, shard-reports +
+  AvailableCapacity views, Grafana embed), operational ergonomics (deep-link saved filters,
+  virtualised tables, optional oauth2-proxy auth + reader RBAC), evidence + history (snapshot
+  evaluation, range-query trend charts), and the v1.0 read surface: a frozen `/api/v1` contract
+  ([`api.md`](./api.md)), endpoint smoke conformance, documented SLOs ([`slos.md`](./slos.md)), and a
+  substrate-gated multi-cluster e2e suite ([`e2e.md`](./e2e.md)). **The dashboard is feature-complete
+  as a read surface.**
 
 ## Guiding principles (do not break)
 
@@ -64,9 +71,13 @@ The adoption + audit punch-list above.
   charts — cycle-p99 and action-rate-by-kind over the last hour — via `/api/shards/{pod}/trends`
   and a reusable `TimeSeriesChart` component (`done`).
 
-### v1.0 — Feature-complete read surface
-- **Real multi-cluster e2e.** Exercise every view against the bigfleet repo's kind-based e2e harness
-  (multi-cluster, real gRPC, real CRDs) — not just unit/stub tests.
+### v1.0 — Feature-complete read surface ✓ done
+- **Real multi-cluster e2e. ✓** `test/e2e/dashboard_e2e_test.go` (`make e2e`, build tag `e2e`) is the
+  conformance test's live-fleet sibling: it builds the real `server` in-process against a running
+  multi-cluster BigFleet (real Prometheus / coordinator gRPC / CRDs), discovers real shard/cluster
+  IDs, and drives every `/api/v1` route. It is **substrate-gated** — excluded from default CI, skips
+  without `DASHBOARD_E2E_*`, and is run devpod-side (not on the laptop) per the CLAUDE.md
+  validation-ladder rule. Stand-up + env contract: [`docs/e2e.md`](./e2e.md) (`done`, scaffolded).
 - **Dashboard SLOs. ✓** [`docs/slos.md`](./slos.md) decomposes page latency into dashboard overhead
   (the dashboard's SLO) vs upstream query latency (Prometheus/coordinator/kube SLOs), states the
   per-request overhead budget (< 50 ms at the scale ceilings) measured by `BenchmarkNeeds` /

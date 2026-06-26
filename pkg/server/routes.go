@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/intUnderflow/bigfleet-web-dashboard/pkg/api"
@@ -44,6 +45,23 @@ func (s *Server) apiHandlers() map[string]http.HandlerFunc {
 		"GET /needs":               s.needsHandler,
 		"GET /finops/snapshot":     s.finopsHandler,
 	}
+}
+
+// Handler exposes the route mux for out-of-package harnesses (the substrate-
+// gated e2e suite) that drive the surface in-process against a real fleet.
+func (s *Server) Handler() http.Handler { return s.mux }
+
+// APIRoutePatterns returns the v1 route patterns ("METHOD /suffix"), sorted, so
+// an out-of-package harness can enumerate the whole surface without re-stating
+// it (and stay in lockstep with apiHandlers).
+func (s *Server) APIRoutePatterns() []string {
+	h := s.apiHandlers()
+	out := make([]string, 0, len(h))
+	for p := range h {
+		out = append(out, p)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, _ *http.Request) {

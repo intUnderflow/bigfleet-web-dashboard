@@ -42,6 +42,16 @@ build: ui-build ## Build single binary with UI embedded
 test:
 	$(GO) test -race ./...
 
+# Substrate-gated: drives every /api/v1 route against a REAL running
+# multi-cluster bigfleet (real Prometheus / coordinator gRPC / CRDs). Behind
+# the `e2e` build tag, so it is NOT part of `make test` or default CI. Needs
+# DASHBOARD_E2E_* env wired to a fleet stood up by the bigfleet repo's kind
+# e2e harness; skips otherwise. Do NOT run on the dev laptop as a routine gate
+# (CLAUDE.md validation-ladder rule). See docs/e2e.md.
+.PHONY: e2e
+e2e: ## Drive every /api/v1 route against a real fleet (substrate-gated; see docs/e2e.md)
+	$(GO) test -tags e2e -count=1 -v ./test/e2e/...
+
 # Built from source (go install) rather than the prebuilt release so it is
 # compiled with this module's Go toolchain — the release binary is built with
 # an older Go and refuses to lint a newer-targeted module ("Go language
