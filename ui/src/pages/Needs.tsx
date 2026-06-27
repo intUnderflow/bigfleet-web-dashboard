@@ -269,9 +269,13 @@ function SummaryBar({
 function gridCols(showCluster: boolean): CSSProperties {
   return {
     display: "grid",
+    // Priority track is a fixed 128px (not 80px): BigFleet priorities go up to ~1e9 (the critical
+    // tier renders as "1,000,000,000", ~13 chars) which overflowed the old 80px column into the
+    // Demand cell. Each row is its own grid, so the track must be fixed to stay aligned across
+    // rows — auto/max-content would size per-row and misalign the columns.
     gridTemplateColumns: showCluster
-      ? "minmax(150px,170px) minmax(120px,1fr) 80px minmax(170px,1.4fr) 64px 34px"
-      : "minmax(150px,180px) 80px minmax(180px,1fr) 64px 34px",
+      ? "minmax(150px,170px) minmax(120px,1fr) 128px minmax(170px,1.4fr) 64px 34px"
+      : "minmax(150px,180px) 128px minmax(180px,1fr) 64px 34px",
     alignItems: "center",
   };
 }
