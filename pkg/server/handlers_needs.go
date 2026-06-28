@@ -76,7 +76,7 @@ func (s *Server) needsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func toAPINeedView(n shardclient.NeedView) api.NeedView {
-	return api.NeedView{
+	v := api.NeedView{
 		ClusterID:                 n.ClusterID,
 		Priority:                  int(n.Priority),
 		AggregateResources:        n.AggregateResources,
@@ -93,7 +93,27 @@ func toAPINeedView(n shardclient.NeedView) api.NeedView {
 		SameDomain:                n.SameDomain,
 		SameSatisfiable:           n.SameSatisfiable,
 		AcquisitionParked:         n.AcquisitionParked,
+		ParkedAgeCycles:           int(n.ParkedAgeCycles),
 		AgeCyclesUnmet:            int(n.AgeCyclesUnmet),
 		UnmetReason:               n.UnmetReason,
 	}
+	if ms := n.MatchingSupply; ms != nil {
+		v.MatchingSupply = &api.MatchingSupply{
+			Idle:        int(ms.Idle),
+			Configured:  int(ms.Configured),
+			Speculative: int(ms.Speculative),
+			Capped:      ms.Capped,
+		}
+	}
+	if p := n.Preemption; p != nil {
+		v.Preemption = &api.PreemptionSummary{VictimsFound: int(p.VictimsFound), CapacityFreed: p.CapacityFreed}
+	}
+	for _, c := range n.SameCandidates {
+		v.SameCandidates = append(v.SameCandidates, api.DomainCoverage{
+			Domain:           c.Domain,
+			CoveragePerMille: int(c.CoveragePerMille),
+			Satisfiable:      c.Satisfiable,
+		})
+	}
+	return v
 }

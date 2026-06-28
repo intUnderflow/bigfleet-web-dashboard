@@ -183,8 +183,36 @@ type NeedView struct {
 	SameDomain                string            `json:"sameDomain,omitempty"`
 	SameSatisfiable           bool              `json:"sameSatisfiable"`
 	AcquisitionParked         bool              `json:"acquisitionParked"`
+	ParkedAgeCycles           int               `json:"parkedAgeCycles,omitempty"`
 	AgeCyclesUnmet            int               `json:"ageCyclesUnmet"`
 	UnmetReason               string            `json:"unmetReason"`
+
+	// ADR-0061 amendment decision context (observation-only).
+	MatchingSupply *MatchingSupply    `json:"matchingSupply,omitempty"`
+	Preemption     *PreemptionSummary `json:"preemption,omitempty"`
+	SameCandidates []DomainCoverage   `json:"sameCandidates,omitempty"`
+}
+
+// MatchingSupply is the per-state count of machines matching an unsatisfied
+// Need's shape; capped is true if any state hit the engine's count cap.
+type MatchingSupply struct {
+	Idle        int  `json:"idle"`
+	Configured  int  `json:"configured"`
+	Speculative int  `json:"speculative"`
+	Capped      bool `json:"capped"`
+}
+
+// PreemptionSummary is Phase 2's preemption attempt for a still-unmet Need.
+type PreemptionSummary struct {
+	VictimsFound  int               `json:"victimsFound"`
+	CapacityFreed map[string]string `json:"capacityFreed,omitempty"`
+}
+
+// DomainCoverage is one candidate topology domain the Same pre-pass weighed.
+type DomainCoverage struct {
+	Domain           string `json:"domain"`
+	CoveragePerMille int    `json:"coveragePerMille"`
+	Satisfiable      bool   `json:"satisfiable"`
 }
 
 // NeedsResponse is one shard's needs snapshot. cycle 0 with no needs means

@@ -192,6 +192,24 @@ export interface AvailableCapacityResponse {
   queriedAt: string;
 }
 
+export interface MatchingSupply {
+  idle: number;
+  configured: number;
+  speculative: number;
+  capped: boolean;
+}
+
+export interface PreemptionSummary {
+  victimsFound: number;
+  capacityFreed?: Record<string, string>;
+}
+
+export interface DomainCoverage {
+  domain: string;
+  coveragePerMille: number;
+  satisfiable: boolean;
+}
+
 export interface NeedView {
   clusterId: string;
   priority: number;
@@ -209,8 +227,13 @@ export interface NeedView {
   sameDomain?: string;
   sameSatisfiable: boolean;
   acquisitionParked: boolean;
+  parkedAgeCycles?: number;
   ageCyclesUnmet: number;
   unmetReason: string;
+  // ADR-0061 amendment decision context (observation-only).
+  matchingSupply?: MatchingSupply;
+  preemption?: PreemptionSummary;
+  sameCandidates?: DomainCoverage[];
 }
 
 export interface NeedsResponse {

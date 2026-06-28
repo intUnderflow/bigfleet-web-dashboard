@@ -2,17 +2,21 @@ import { useEffect, type ReactNode } from "react";
 
 /** A right-side slide-over panel. Closes on Escape or overlay click.
  *  Renders nothing when closed. */
+const sizeClass = { md: "max-w-md", lg: "max-w-2xl", xl: "max-w-3xl" } as const;
+
 export default function Drawer({
   open,
   onClose,
   title,
   subtitle,
+  size = "md",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
   subtitle?: ReactNode;
+  size?: keyof typeof sizeClass;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -34,7 +38,7 @@ export default function Drawer({
         onClick={onClose}
         className="bf-overlay absolute inset-0 bg-black/35 backdrop-blur-[1px]"
       />
-      <div className="bf-drawer relative flex h-full w-full max-w-md flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]">
+      <div className={`bf-drawer relative flex h-full w-full ${sizeClass[size]} flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]`}>
         <header className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-[var(--text)]">{title}</h2>

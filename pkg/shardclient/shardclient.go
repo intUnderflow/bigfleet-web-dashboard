@@ -35,8 +35,36 @@ type NeedView struct {
 	SameDomain                string
 	SameSatisfiable           bool
 	AcquisitionParked         bool
+	ParkedAgeCycles           int32
 	AgeCyclesUnmet            int32
 	UnmetReason               string
+
+	// ADR-0061 amendment decision context (observation-only):
+	MatchingSupply *MatchingSupply    // per-state matching cardinality (unsatisfied only)
+	Preemption     *PreemptionSummary // Phase 2 victim summary (PREEMPTION_EXHAUSTED only)
+	SameCandidates []DomainCoverage   // top-K candidate-domain coverage (Same Needs)
+}
+
+// MatchingSupply is the per-state count of machines matching an unsatisfied
+// Need's shape; Capped is true if any state hit the engine's count cap.
+type MatchingSupply struct {
+	Idle        int32
+	Configured  int32
+	Speculative int32
+	Capped      bool
+}
+
+// PreemptionSummary is Phase 2's preemption attempt for a still-unmet Need.
+type PreemptionSummary struct {
+	VictimsFound  int32
+	CapacityFreed map[string]string
+}
+
+// DomainCoverage is one candidate topology domain the Same pre-pass weighed.
+type DomainCoverage struct {
+	Domain           string
+	CoveragePerMille int32
+	Satisfiable      bool
 }
 
 // NeedsSnapshot is one shard's InspectNeeds response.
@@ -120,11 +148,34 @@ func fromProto(nv *pb.NeedView) NeedView {
 		SameDomain:                nv.GetSameDomain(),
 		SameSatisfiable:           nv.GetSameSatisfiable(),
 		AcquisitionParked:         nv.GetAcquisitionParked(),
+		ParkedAgeCycles:           nv.GetParkedAgeCycles(),
 		AgeCyclesUnmet:            nv.GetAgeCyclesUnmet(),
 		UnmetReason:               strings.TrimPrefix(nv.GetUnmetReason().String(), "UNMET_REASON_"),
 	}
 	if d := nv.GetResidualDeficit(); d != nil {
 		out.ResidualDeficit = d.GetResources()
+	}
+	// ADR-0061 amendment decision context.
+	if ms := nv.GetMatchingSupply(); ms != nil {
+		out.MatchingSupply = &MatchingSupply{
+			Idle:        ms.GetIdle(),
+			Configured:  ms.GetConfigured(),
+			Speculative: ms.GetSpeculative(),
+			Capped:      ms.GetCapped(),
+		}
+	}
+	if p := nv.GetPreemption(); p != nil {
+		out.Preemption = &PreemptionSummary{
+			VictimsFound:  p.GetVictimsFound(),
+			CapacityFreed: p.GetCapacityFreed().GetResources(),
+		}
+	}
+	for _, c := range nv.GetSameCandidates() {
+		out.SameCandidates = append(out.SameCandidates, DomainCoverage{
+			Domain:           c.GetDomain(),
+			CoveragePerMille: c.GetCoveragePerMille(),
+			Satisfiable:      c.GetSatisfiable(),
+		})
 	}
 	return out
 }

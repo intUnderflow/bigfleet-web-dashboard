@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import Needs from "./Needs";
@@ -90,6 +90,68 @@ describe("Needs explorer", () => {
     expect((await screen.findAllByText("priority-starved")).length).toBeGreaterThan(0);
     // The demand cell renders the wanted resources compactly.
     expect(await screen.findByText("8 cpu")).toBeInTheDocument();
+  });
+
+  it("opens a decision report with supply arithmetic, matching-supply cardinality, competitors, and an action", async () => {
+    const starved = {
+      clusterId: "ml-train-1",
+      priority: 8500,
+      aggregateResources: { "nvidia.com/gpu": "8", cpu: "128" },
+      minUnit: { "nvidia.com/gpu": "1" },
+      group: "gang-7",
+      interruptionPenaltyBucket: "$4096",
+      reclamationPenaltyBucket: "$256",
+      satisfied: false,
+      residualDeficit: { "nvidia.com/gpu": "4" },
+      claimedMachineCount: 4,
+      bootstrapCount: 3,
+      provisionCount: 1,
+      sameSatisfiable: false,
+      acquisitionParked: false,
+      ageCyclesUnmet: 12,
+      unmetReason: "PRIORITY_STARVED",
+      matchingSupply: { idle: 2, configured: 40, speculative: 0, capped: false },
+    };
+    const competitor = {
+      clusterId: "ml-train-1",
+      priority: 9000,
+      aggregateResources: { "nvidia.com/gpu": "8" },
+      interruptionPenaltyBucket: "PINNED",
+      reclamationPenaltyBucket: "$0",
+      satisfied: true,
+      claimedMachineCount: 30,
+      bootstrapCount: 0,
+      provisionCount: 0,
+      sameSatisfiable: false,
+      acquisitionParked: false,
+      ageCyclesUnmet: 0,
+      unmetReason: "UNSPECIFIED",
+    };
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
+        "/api/topology": { coordinator: coordinatorHealth, shards: oneShard, domainAssignments: [], queriedAt: "" },
+        "/api/needs": { shardId: "shard-a", cycle: 88, computedAtUnixNanos: 0, totalNeeds: 2, needs: [competitor, starved], queriedAt: "" },
+      }),
+    );
+    renderWithProviders(<Needs />);
+
+    const pill = await screen.findByText("priority-starved");
+    const row = pill.closest("button");
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+
+    // The decision report panel opens with its sections.
+    expect(await screen.findByText("Supply arithmetic")).toBeInTheDocument();
+    expect(await screen.findByText("Matching supply in inventory")).toBeInTheDocument();
+    // The configured cardinality (40) is surfaced.
+    expect(await screen.findByText("40")).toBeInTheDocument();
+    // The competitor (higher precedence, claimed 30) shows up "ahead in line".
+    expect(await screen.findByText("Ahead of you in line")).toBeInTheDocument();
+    expect(await screen.findByText("30")).toBeInTheDocument();
+    // A recommended action is offered.
+    expect(await screen.findByText(/What to do/)).toBeInTheDocument();
   });
 
   it("windows a large single-cluster needs list rather than mounting every row", async () => {
