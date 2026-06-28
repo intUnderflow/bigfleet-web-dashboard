@@ -18,13 +18,19 @@ import (
 )
 
 // NeedView is the read-side projection of one Need's last-cycle verdict.
+//
+// A Need is not an atom: it is the collapse of every unschedulable pod/CR
+// whose aggregation key — (Requirements, Priority, Spread, the two penalty
+// buckets) — matches (ADR-0027). We project that whole key, not a thin
+// subset, so the dashboard can explain *how* the roll-up formed this Need.
 type NeedView struct {
 	ClusterID                 string
 	Priority                  int32
 	AggregateResources        map[string]string
 	MinUnit                   map[string]string
 	Group                     string
-	Requirements              []string
+	Requirements              []Requirement
+	Spread                    []TopologySpread
 	InterruptionPenaltyBucket string
 	ReclamationPenaltyBucket  string
 	Satisfied                 bool
@@ -38,11 +44,32 @@ type NeedView struct {
 	ParkedAgeCycles           int32
 	AgeCyclesUnmet            int32
 	UnmetReason               string
+	ArrivalUnixNanos          int64  // NeedsTable secondary sort key (priority desc, arrival asc)
+	ProfileFingerprint        string // aggregation-profile identity; cohort + cross-link join key
 
 	// ADR-0061 amendment decision context (observation-only):
 	MatchingSupply *MatchingSupply    // per-state matching cardinality (unsatisfied only)
 	Preemption     *PreemptionSummary // Phase 2 victim summary (PREEMPTION_EXHAUSTED only)
 	SameCandidates []DomainCoverage   // top-K candidate-domain coverage (Same Needs)
+}
+
+// Requirement is one node-selector term of the aggregation key, kept
+// structured (key/operator/values) so the protobuf-only Same operator — the
+// signal that makes a gang a gang — survives to the UI rather than being
+// flattened into a lossy string.
+type Requirement struct {
+	Key      string
+	Operator string // In, NotIn, Exists, DoesNotExist, Same
+	Values   []string
+}
+
+// TopologySpread is a spread term of the aggregation key (one of the five
+// fields CRs must match to collapse into a Need). Dropped by the old
+// projection; surfaced now because it is decision context, not decoration.
+type TopologySpread struct {
+	TopologyKey       string
+	MaxSkew           int32
+	WhenUnsatisfiable string // DoNotSchedule, ScheduleAnyway
 }
 
 // MatchingSupply is the per-state count of machines matching an unsatisfied
@@ -138,7 +165,8 @@ func fromProto(nv *pb.NeedView) NeedView {
 		AggregateResources:        n.GetAggregateResources(),
 		MinUnit:                   n.GetMinUnit(),
 		Group:                     n.GetGroup(),
-		Requirements:              formatRequirements(n.GetRequirements()),
+		Requirements:              fromProtoRequirements(n.GetRequirements()),
+		Spread:                    fromProtoSpread(n.GetSpread()),
 		InterruptionPenaltyBucket: shortBucket(n.GetInterruptionPenaltyBucket()),
 		ReclamationPenaltyBucket:  shortBucket(n.GetReclamationPenaltyBucket()),
 		Satisfied:                 nv.GetSatisfied(),
@@ -151,6 +179,8 @@ func fromProto(nv *pb.NeedView) NeedView {
 		ParkedAgeCycles:           nv.GetParkedAgeCycles(),
 		AgeCyclesUnmet:            nv.GetAgeCyclesUnmet(),
 		UnmetReason:               strings.TrimPrefix(nv.GetUnmetReason().String(), "UNMET_REASON_"),
+		ArrivalUnixNanos:          nv.GetArrivalUnixNanos(),
+		ProfileFingerprint:        nv.GetProfileFingerprint(),
 	}
 	if d := nv.GetResidualDeficit(); d != nil {
 		out.ResidualDeficit = d.GetResources()
@@ -180,17 +210,67 @@ func fromProto(nv *pb.NeedView) NeedView {
 	return out
 }
 
-func formatRequirements(rs []*pb.NodeSelectorRequirement) []string {
-	out := make([]string, 0, len(rs))
+// fromProtoRequirements keeps each term structured (key/operator/values) so
+// the Same operator survives; titleOperator renders the enum as In/NotIn/
+// Exists/DoesNotExist/Same.
+func fromProtoRequirements(rs []*pb.NodeSelectorRequirement) []Requirement {
+	if len(rs) == 0 {
+		return nil
+	}
+	out := make([]Requirement, 0, len(rs))
 	for _, r := range rs {
-		op := strings.TrimPrefix(r.GetOperator().String(), "OPERATOR_")
-		if vals := r.GetValues(); len(vals) > 0 {
-			out = append(out, fmt.Sprintf("%s %s [%s]", r.GetKey(), op, strings.Join(vals, ",")))
-		} else {
-			out = append(out, fmt.Sprintf("%s %s", r.GetKey(), op))
-		}
+		out = append(out, Requirement{
+			Key:      r.GetKey(),
+			Operator: titleOperator(r.GetOperator()),
+			Values:   r.GetValues(),
+		})
 	}
 	return out
+}
+
+func fromProtoSpread(ss []*pb.TopologySpread) []TopologySpread {
+	if len(ss) == 0 {
+		return nil
+	}
+	out := make([]TopologySpread, 0, len(ss))
+	for _, s := range ss {
+		out = append(out, TopologySpread{
+			TopologyKey:       s.GetTopologyKey(),
+			MaxSkew:           s.GetMaxSkew(),
+			WhenUnsatisfiable: titleWhenUnsatisfiable(s.GetWhenUnsatisfiable()),
+		})
+	}
+	return out
+}
+
+// titleOperator maps the NodeSelector operator enum to a compact CamelCase
+// label (OPERATOR_NOT_IN → "NotIn", OPERATOR_SAME → "Same").
+func titleOperator(op pb.NodeSelectorRequirement_Operator) string {
+	switch op {
+	case pb.NodeSelectorRequirement_OPERATOR_IN:
+		return "In"
+	case pb.NodeSelectorRequirement_OPERATOR_NOT_IN:
+		return "NotIn"
+	case pb.NodeSelectorRequirement_OPERATOR_EXISTS:
+		return "Exists"
+	case pb.NodeSelectorRequirement_OPERATOR_DOES_NOT_EXIST:
+		return "DoesNotExist"
+	case pb.NodeSelectorRequirement_OPERATOR_SAME:
+		return "Same"
+	default:
+		return strings.TrimPrefix(op.String(), "OPERATOR_")
+	}
+}
+
+func titleWhenUnsatisfiable(w pb.TopologySpread_WhenUnsatisfiable) string {
+	switch w {
+	case pb.TopologySpread_WHEN_UNSATISFIABLE_DO_NOT_SCHEDULE:
+		return "DoNotSchedule"
+	case pb.TopologySpread_WHEN_UNSATISFIABLE_SCHEDULE_ANYWAY:
+		return "ScheduleAnyway"
+	default:
+		return strings.TrimPrefix(w.String(), "WHEN_UNSATISFIABLE_")
+	}
 }
 
 // shortBucket renders a PenaltyBucket as its short label (e.g. "8192",

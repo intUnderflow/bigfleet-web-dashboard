@@ -30,32 +30,27 @@ function renderWithProviders(ui: ReactElement) {
 
 const coordinatorHealth = { raftTerm: 1, applyRatePerSec: 0, applyErrorRatePerSec: 0, pendingInstructionsTotal: 0 };
 const oneShard = [{ shardId: "shard-a", address: "", registeredAtUnixSec: 0, lastHeartbeatUnixSec: 0, pendingInstructions: 0 }];
+const wiredConfig = { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false };
+const topology = { coordinator: coordinatorHealth, shards: oneShard, domainAssignments: [], queriedAt: "" };
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("Needs explorer", () => {
+describe("Needs workspace", () => {
   it("shows the unwired notice when the coordinator is not wired", async () => {
     vi.stubGlobal(
       "fetch",
-      routeFetch({
-        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: false, kubeconfigWired: false },
-      }),
+      routeFetch({ "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: false, kubeconfigWired: false } }),
     );
     renderWithProviders(<Needs />);
     expect(await screen.findByText(/--coordinator-addr/)).toBeInTheDocument();
   });
 
-  it("scopes to the first cluster and shows a humanized unmet reason", async () => {
+  it("scopes to the first cluster and humanizes millicpu + the unmet reason", async () => {
     vi.stubGlobal(
       "fetch",
       routeFetch({
-        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
-        "/api/topology": {
-          coordinator: coordinatorHealth,
-          shards: oneShard,
-          domainAssignments: [],
-          queriedAt: "",
-        },
+        "/api/config": wiredConfig,
+        "/api/topology": topology,
         "/api/needs": {
           shardId: "shard-a",
           cycle: 88,
@@ -65,11 +60,11 @@ describe("Needs explorer", () => {
             {
               clusterId: "payments",
               priority: 1_000_000,
-              aggregateResources: { cpu: "8" },
-              interruptionPenaltyBucket: "PINNED",
-              reclamationPenaltyBucket: "ZERO",
+              aggregateResources: { cpu: "8000m" }, // millicpu on the wire …
+              interruptionPenaltyBucket: "HALF_DOLLAR",
+              reclamationPenaltyBucket: "UNSPECIFIED",
               satisfied: false,
-              residualDeficit: { cpu: "8" },
+              residualDeficit: { cpu: "8000m" },
               claimedMachineCount: 0,
               bootstrapCount: 0,
               provisionCount: 0,
@@ -84,23 +79,27 @@ describe("Needs explorer", () => {
       }),
     );
     renderWithProviders(<Needs />);
-    // The cluster appears as a selectable scope (option text "payments (1 · 1 unmet)").
     expect(await screen.findByText(/payments/)).toBeInTheDocument();
-    // The raw enum is humanized; it shows in both the status pill and the summary bar.
     expect((await screen.findAllByText("priority-starved")).length).toBeGreaterThan(0);
-    // The demand cell renders the wanted resources compactly.
+    // … rendered as humanized cores, not "8000m".
     expect(await screen.findByText("8 cpu")).toBeInTheDocument();
   });
 
-  it("opens a decision report with supply arithmetic, matching-supply cardinality, competitors, and an action", async () => {
+  it("opens a causal decision report: aggregation key (with Same), demand shape, decision trace, supply funnel, competition, action", async () => {
     const starved = {
       clusterId: "ml-train-1",
       priority: 8500,
       aggregateResources: { "nvidia.com/gpu": "8", cpu: "128" },
       minUnit: { "nvidia.com/gpu": "1" },
-      group: "gang-7",
-      interruptionPenaltyBucket: "$4096",
-      reclamationPenaltyBucket: "$256",
+      requirements: [
+        { key: "node.kubernetes.io/instance-type", operator: "In", values: ["h100"] },
+        { key: "topology.kubernetes.io/zone", operator: "Same", values: [] },
+      ],
+      spread: [{ topologyKey: "topology.kubernetes.io/zone", maxSkew: 1, whenUnsatisfiable: "DoNotSchedule" }],
+      profileFingerprint: "abc123def456ff",
+      arrivalUnixNanos: 1_780_000_000_000_000_000,
+      interruptionPenaltyBucket: "4096",
+      reclamationPenaltyBucket: "256",
       satisfied: false,
       residualDeficit: { "nvidia.com/gpu": "4" },
       claimedMachineCount: 4,
@@ -117,7 +116,7 @@ describe("Needs explorer", () => {
       priority: 9000,
       aggregateResources: { "nvidia.com/gpu": "8" },
       interruptionPenaltyBucket: "PINNED",
-      reclamationPenaltyBucket: "$0",
+      reclamationPenaltyBucket: "ZERO",
       satisfied: true,
       claimedMachineCount: 30,
       bootstrapCount: 0,
@@ -130,28 +129,76 @@ describe("Needs explorer", () => {
     vi.stubGlobal(
       "fetch",
       routeFetch({
-        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
-        "/api/topology": { coordinator: coordinatorHealth, shards: oneShard, domainAssignments: [], queriedAt: "" },
+        "/api/config": wiredConfig,
+        "/api/topology": topology,
         "/api/needs": { shardId: "shard-a", cycle: 88, computedAtUnixNanos: 0, totalNeeds: 2, needs: [competitor, starved], queriedAt: "" },
       }),
     );
     renderWithProviders(<Needs />);
 
     const pill = await screen.findByText("priority-starved");
-    const row = pill.closest("button");
-    expect(row).not.toBeNull();
-    fireEvent.click(row!);
+    fireEvent.click(pill.closest("button")!);
 
-    // The decision report panel opens with its sections.
-    expect(await screen.findByText("Supply arithmetic")).toBeInTheDocument();
-    expect(await screen.findByText("Matching supply in inventory")).toBeInTheDocument();
-    // The configured cardinality (40) is surfaced.
-    expect(await screen.findByText("40")).toBeInTheDocument();
-    // The competitor (higher precedence, claimed 30) shows up "ahead in line".
+    // The aggregation-key card leads the report and renders the Same operator
+    // (co-loc shows in both the master row chip and the drawer key card).
+    expect(await screen.findByText("Aggregation key")).toBeInTheDocument();
+    expect((await screen.findAllByText("co-loc")).length).toBeGreaterThan(0);
+    // Demand shape teaches the indivisibility math, ADR-0027-safe.
+    expect(await screen.findByText("Demand shape")).toBeInTheDocument();
+    expect(await screen.findByText(/not a pod count/)).toBeInTheDocument();
+    // Decision trace + supply funnel (matching pool 2+40 = 42).
+    expect(await screen.findByText("Decision trace")).toBeInTheDocument();
+    expect(await screen.findByText("Supply funnel")).toBeInTheDocument();
+    expect((await screen.findAllByText("42")).length).toBeGreaterThan(0);
+    // The higher-precedence competitor (claimed 30) shows up ahead in line.
     expect(await screen.findByText("Ahead of you in line")).toBeInTheDocument();
-    expect(await screen.findByText("30")).toBeInTheDocument();
+    expect((await screen.findAllByText("30")).length).toBeGreaterThan(0);
     // A recommended action is offered.
     expect(await screen.findByText(/What to do/)).toBeInTheDocument();
+  });
+
+  it("groups a contested shape into a cohort and draws the cut-line", async () => {
+    const fp = "shape-fp-77";
+    const claiming = {
+      clusterId: "team-a",
+      priority: 9000,
+      aggregateResources: { "nvidia.com/gpu": "8" },
+      minUnit: { "nvidia.com/gpu": "8" },
+      profileFingerprint: fp,
+      arrivalUnixNanos: 1,
+      interruptionPenaltyBucket: "ZERO",
+      reclamationPenaltyBucket: "ZERO",
+      satisfied: true,
+      claimedMachineCount: 30,
+      bootstrapCount: 0,
+      provisionCount: 0,
+      sameSatisfiable: false,
+      acquisitionParked: false,
+      ageCyclesUnmet: 0,
+      unmetReason: "UNSPECIFIED",
+    };
+    const starved = {
+      ...claiming,
+      priority: 8000,
+      arrivalUnixNanos: 2,
+      satisfied: false,
+      claimedMachineCount: 0,
+      residualDeficit: { "nvidia.com/gpu": "8" },
+      ageCyclesUnmet: 7,
+      unmetReason: "PRIORITY_STARVED",
+      matchingSupply: { idle: 0, configured: 30, speculative: 0, capped: false },
+    };
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "/api/config": wiredConfig,
+        "/api/topology": topology,
+        "/api/needs": { shardId: "shard-a", cycle: 5, computedAtUnixNanos: 0, totalNeeds: 2, needs: [claiming, starved], queriedAt: "" },
+      }),
+    );
+    renderWithProviders(<Needs />);
+    expect(await screen.findByText(/contested shape/i)).toBeInTheDocument();
+    expect(await screen.findByText(/supply exhausted here/i)).toBeInTheDocument();
   });
 
   it("windows a large single-cluster needs list rather than mounting every row", async () => {
@@ -159,8 +206,8 @@ describe("Needs explorer", () => {
       clusterId: "big-cluster",
       priority: 1000 + i,
       aggregateResources: { cpu: "1" },
-      interruptionPenaltyBucket: "1",
-      reclamationPenaltyBucket: "0",
+      interruptionPenaltyBucket: "ZERO",
+      reclamationPenaltyBucket: "ZERO",
       satisfied: true,
       claimedMachineCount: 1,
       bootstrapCount: 0,
@@ -173,20 +220,13 @@ describe("Needs explorer", () => {
     vi.stubGlobal(
       "fetch",
       routeFetch({
-        "/api/config": { grafanaUrl: "", prometheusWired: false, coordinatorWired: true, kubeconfigWired: false },
-        "/api/topology": {
-          coordinator: coordinatorHealth,
-          shards: oneShard,
-          domainAssignments: [],
-          queriedAt: "",
-        },
+        "/api/config": wiredConfig,
+        "/api/topology": topology,
         "/api/needs": { shardId: "shard-a", cycle: 1, computedAtUnixNanos: 0, totalNeeds: 400, needs: many },
       }),
     );
     renderWithProviders(<Needs />);
-    // The table header renders (table mounted) ...
     expect(await screen.findByText("Status")).toBeInTheDocument();
-    // ... but far fewer than all 400 status pills are in the DOM (windowed).
     await waitFor(() => expect(screen.queryAllByText("satisfied").length).toBeLessThan(400));
   });
 });

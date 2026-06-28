@@ -51,7 +51,7 @@ func makeNeedsSnapshot(n int) shardclient.NeedsSnapshot {
 			AggregateResources:        map[string]string{"cpu": "32", "nvidia.com/gpu": "8"},
 			MinUnit:                   map[string]string{"cpu": "8"},
 			Group:                     "gang-" + strconv.Itoa(i%50),
-			Requirements:              []string{"zone in (eu-west-1a)"},
+			Requirements:              []shardclient.Requirement{{Key: "zone", Operator: "In", Values: []string{"eu-west-1a"}}},
 			InterruptionPenaltyBucket: "$4",
 			ReclamationPenaltyBucket:  "$2",
 			Satisfied:                 i%3 == 0,

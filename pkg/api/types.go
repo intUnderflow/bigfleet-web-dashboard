@@ -172,7 +172,8 @@ type NeedView struct {
 	AggregateResources        map[string]string `json:"aggregateResources"`
 	MinUnit                   map[string]string `json:"minUnit,omitempty"`
 	Group                     string            `json:"group,omitempty"`
-	Requirements              []string          `json:"requirements,omitempty"`
+	Requirements              []Requirement     `json:"requirements,omitempty"`
+	Spread                    []TopologySpread  `json:"spread,omitempty"`
 	InterruptionPenaltyBucket string            `json:"interruptionPenaltyBucket"`
 	ReclamationPenaltyBucket  string            `json:"reclamationPenaltyBucket"`
 	Satisfied                 bool              `json:"satisfied"`
@@ -186,11 +187,28 @@ type NeedView struct {
 	ParkedAgeCycles           int               `json:"parkedAgeCycles,omitempty"`
 	AgeCyclesUnmet            int               `json:"ageCyclesUnmet"`
 	UnmetReason               string            `json:"unmetReason"`
+	ArrivalUnixNanos          int64             `json:"arrivalUnixNanos,omitempty"`
+	ProfileFingerprint        string            `json:"profileFingerprint,omitempty"`
 
 	// ADR-0061 amendment decision context (observation-only).
 	MatchingSupply *MatchingSupply    `json:"matchingSupply,omitempty"`
 	Preemption     *PreemptionSummary `json:"preemption,omitempty"`
 	SameCandidates []DomainCoverage   `json:"sameCandidates,omitempty"`
+}
+
+// Requirement is one node-selector term of a Need's aggregation key, kept
+// structured so the Same operator (the co-location signal) survives.
+type Requirement struct {
+	Key      string   `json:"key"`
+	Operator string   `json:"operator"`
+	Values   []string `json:"values,omitempty"`
+}
+
+// TopologySpread is one spread term of a Need's aggregation key.
+type TopologySpread struct {
+	TopologyKey       string `json:"topologyKey"`
+	MaxSkew           int    `json:"maxSkew"`
+	WhenUnsatisfiable string `json:"whenUnsatisfiable,omitempty"`
 }
 
 // MatchingSupply is the per-state count of machines matching an unsatisfied

@@ -210,13 +210,29 @@ export interface DomainCoverage {
   satisfiable: boolean;
 }
 
+// One node-selector term of a Need's aggregation key. operator is one of
+// In | NotIn | Exists | DoesNotExist | Same (Same = co-location, gang signal).
+export interface Requirement {
+  key: string;
+  operator: string;
+  values?: string[];
+}
+
+// One spread term of a Need's aggregation key.
+export interface TopologySpread {
+  topologyKey: string;
+  maxSkew: number;
+  whenUnsatisfiable?: string; // DoNotSchedule | ScheduleAnyway
+}
+
 export interface NeedView {
   clusterId: string;
   priority: number;
   aggregateResources: Record<string, string>;
   minUnit?: Record<string, string>;
   group?: string;
-  requirements?: string[];
+  requirements?: Requirement[];
+  spread?: TopologySpread[];
   interruptionPenaltyBucket: string;
   reclamationPenaltyBucket: string;
   satisfied: boolean;
@@ -230,6 +246,8 @@ export interface NeedView {
   parkedAgeCycles?: number;
   ageCyclesUnmet: number;
   unmetReason: string;
+  arrivalUnixNanos?: number;
+  profileFingerprint?: string;
   // ADR-0061 amendment decision context (observation-only).
   matchingSupply?: MatchingSupply;
   preemption?: PreemptionSummary;

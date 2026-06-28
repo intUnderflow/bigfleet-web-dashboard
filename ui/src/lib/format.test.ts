@@ -6,6 +6,13 @@ import {
   formatRelative,
   formatPenaltyBucket,
   formatPercent,
+  formatQuantity,
+  formatQuantityValue,
+  formatResources,
+  formatPenalty,
+  penaltyOrdinal,
+  formatPriorityCompact,
+  PENALTY_LADDER_MAX,
 } from "./format";
 
 describe("formatInt", () => {
@@ -72,5 +79,56 @@ describe("formatPercent", () => {
   it("scales a fraction to a percentage", () => {
     expect(formatPercent(0.619)).toBe("61.9%");
     expect(formatPercent(null)).toBe("—");
+  });
+});
+
+describe("formatQuantity", () => {
+  it("humanizes millicpu into cores", () => {
+    expect(formatQuantity("cpu", "278500m")).toBe("278.5 cpu");
+    expect(formatQuantity("cpu", "8500m")).toBe("8.5 cpu");
+    expect(formatQuantity("cpu", "2")).toBe("2 cpu");
+  });
+  it("normalizes binary memory to the largest sensible unit", () => {
+    expect(formatQuantity("memory", "10880Mi")).toBe("10.6 Gi");
+    expect(formatQuantity("memory", "2880Mi")).toBe("2.8 Gi");
+    expect(formatQuantity("memory", "170Gi")).toBe("170 Gi");
+  });
+  it("leaves counted resources (gpu) integral with their short key", () => {
+    expect(formatQuantity("nvidia.com/gpu", "8")).toBe("8 gpu");
+  });
+  it("value-only form drops the resource label", () => {
+    expect(formatQuantityValue("cpu", "278500m")).toBe("278.5");
+    expect(formatQuantityValue("memory", "10880Mi")).toBe("10.6 Gi");
+  });
+  it("joins a resource map", () => {
+    expect(formatResources({ cpu: "128000m", "nvidia.com/gpu": "8" })).toBe("128 cpu · 8 gpu");
+  });
+});
+
+describe("formatPenalty / penaltyOrdinal", () => {
+  it("dollarizes the bucket enum, keeping UNSPECIFIED distinct from ZERO", () => {
+    expect(formatPenalty("UNSPECIFIED")).toBe("unset");
+    expect(formatPenalty("ZERO")).toBe("$0");
+    expect(formatPenalty("HALF_DOLLAR")).toBe("$0.50");
+    expect(formatPenalty("4096")).toBe("$4.1K");
+    expect(formatPenalty("8388608")).toBe("$8.4M");
+    expect(formatPenalty("PINNED")).toBe("pinned");
+  });
+  it("orders buckets on the log ladder with UNSPECIFIED below ZERO", () => {
+    expect(penaltyOrdinal("UNSPECIFIED")).toBe(0);
+    expect(penaltyOrdinal("ZERO")).toBe(1);
+    expect(penaltyOrdinal("HALF_DOLLAR")).toBe(2);
+    expect(penaltyOrdinal("8192")).toBe(16);
+    expect(penaltyOrdinal("PINNED")).toBe(PENALTY_LADDER_MAX);
+    expect(penaltyOrdinal("UNSPECIFIED")).toBeLessThan(penaltyOrdinal("ZERO"));
+  });
+});
+
+describe("formatPriorityCompact", () => {
+  it("abbreviates billions/millions, leaves comparable values exact", () => {
+    expect(formatPriorityCompact(1_000_000_000)).toBe("1B");
+    expect(formatPriorityCompact(2_100_000_000)).toBe("2.1B");
+    expect(formatPriorityCompact(8_500)).toBe("8,500");
+    expect(formatPriorityCompact(100_000)).toBe("100,000");
   });
 });

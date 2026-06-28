@@ -82,7 +82,8 @@ func toAPINeedView(n shardclient.NeedView) api.NeedView {
 		AggregateResources:        n.AggregateResources,
 		MinUnit:                   n.MinUnit,
 		Group:                     n.Group,
-		Requirements:              n.Requirements,
+		Spread:                    spreadToAPI(n.Spread),
+		Requirements:              requirementsToAPI(n.Requirements),
 		InterruptionPenaltyBucket: n.InterruptionPenaltyBucket,
 		ReclamationPenaltyBucket:  n.ReclamationPenaltyBucket,
 		Satisfied:                 n.Satisfied,
@@ -96,6 +97,8 @@ func toAPINeedView(n shardclient.NeedView) api.NeedView {
 		ParkedAgeCycles:           int(n.ParkedAgeCycles),
 		AgeCyclesUnmet:            int(n.AgeCyclesUnmet),
 		UnmetReason:               n.UnmetReason,
+		ArrivalUnixNanos:          n.ArrivalUnixNanos,
+		ProfileFingerprint:        n.ProfileFingerprint,
 	}
 	if ms := n.MatchingSupply; ms != nil {
 		v.MatchingSupply = &api.MatchingSupply{
@@ -116,4 +119,30 @@ func toAPINeedView(n shardclient.NeedView) api.NeedView {
 		})
 	}
 	return v
+}
+
+func requirementsToAPI(rs []shardclient.Requirement) []api.Requirement {
+	if len(rs) == 0 {
+		return nil
+	}
+	out := make([]api.Requirement, 0, len(rs))
+	for _, r := range rs {
+		out = append(out, api.Requirement{Key: r.Key, Operator: r.Operator, Values: r.Values})
+	}
+	return out
+}
+
+func spreadToAPI(ss []shardclient.TopologySpread) []api.TopologySpread {
+	if len(ss) == 0 {
+		return nil
+	}
+	out := make([]api.TopologySpread, 0, len(ss))
+	for _, s := range ss {
+		out = append(out, api.TopologySpread{
+			TopologyKey:       s.TopologyKey,
+			MaxSkew:           int(s.MaxSkew),
+			WhenUnsatisfiable: s.WhenUnsatisfiable,
+		})
+	}
+	return out
 }
