@@ -19,12 +19,12 @@ import {
   competitorsFor,
   CoverageBar,
   CutLine,
+  DecisionTrace,
   DemandShape,
   formatPenalty,
   formatResources,
   KV,
   PenaltyPill,
-  PhaseWaterfall,
   precedes,
   reasonMeta,
   RequirementChip,
@@ -236,7 +236,7 @@ function SummaryBar({
 // populated fingerprints with ≥2 contending needs; everything else is a flat
 // precedence-ordered row (graceful fallback when fingerprints are absent).
 type WalkItem =
-  | { kind: "header"; key: string; fingerprint: string; count: number; supply?: NeedView["matchingSupply"] }
+  | { kind: "header"; key: string; fingerprint: string; count: number; contested: boolean; supply?: NeedView["matchingSupply"] }
   | { kind: "cutline"; key: string; below: number }
   | { kind: "row"; key: string; need: NeedView };
 
@@ -264,10 +264,13 @@ function buildWalk(rows: NeedView[], showCluster: boolean): WalkItem[] {
   // order cohorts by their top need's precedence
   cohorts.sort(([, a], [, b]) => (precedes(a[0]!, b[0]!) ? -1 : 1));
   for (const [fp, g] of cohorts) {
-    // The contested pool is only counted for unmet members (the engine scans
-    // matching supply for unsatisfied Needs); source it from the first that has it.
+    // A shape is only "contested" if some member is actually unmet — an
+    // all-satisfied group sharing a shape isn't scarcity. The contested pool is
+    // counted only for unmet members (matching supply is unmet-only), so source
+    // it from the first member that carries it.
+    const contested = g.some((m) => !m.satisfied);
     const pool = g.find((m) => m.matchingSupply)?.matchingSupply;
-    items.push({ kind: "header", key: `h:${fp}`, fingerprint: fp, count: g.length, supply: pool });
+    items.push({ kind: "header", key: `h:${fp}`, fingerprint: fp, count: g.length, contested, supply: pool });
     let cut = -1;
     for (let i = 0; i < g.length - 1; i++) {
       if (g[i]!.claimedMachineCount > 0 && !g[i + 1]!.satisfied && g[i + 1]!.claimedMachineCount === 0) {
@@ -357,8 +360,10 @@ function NeedRow({ n, showCluster, onSelect }: { n: NeedView; showCluster: boole
         <PenaltyPill bucket={n.interruptionPenaltyBucket} kind="interruption" />
         <PenaltyPill bucket={n.reclamationPenaltyBucket} kind="reclamation" />
       </div>
-      <div className="px-3 text-right tabular-nums text-xs text-[var(--text-muted)]">
-        {!n.satisfied && n.ageCyclesUnmet > 0 ? `${formatInt(n.ageCyclesUnmet)}c` : "—"}
+      <div className="px-3 text-right tabular-nums text-xs text-[var(--text-muted)]" title={!n.satisfied ? `unmet for ${formatInt(n.ageCyclesUnmet)} cycles` : n.arrivalUnixNanos ? "held since" : ""}>
+        {!n.satisfied
+          ? n.ageCyclesUnmet > 0 ? `${formatInt(n.ageCyclesUnmet)}c` : "—"
+          : n.arrivalUnixNanos ? formatRelative(n.arrivalUnixNanos / 1e9).replace(" ago", "") : "—"}
       </div>
       <div className="grid place-items-center text-[var(--text-subtle)]">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -370,7 +375,7 @@ function NeedRow({ n, showCluster, onSelect }: { n: NeedView; showCluster: boole
 }
 
 function WalkRow({ item, showCluster, onSelect }: { item: WalkItem; showCluster: boolean; onSelect: (n: NeedView) => void }) {
-  if (item.kind === "header") return <CohortHeader fingerprint={item.fingerprint} count={item.count} supply={item.supply ?? undefined} />;
+  if (item.kind === "header") return <CohortHeader fingerprint={item.fingerprint} count={item.count} contested={item.contested} supply={item.supply ?? undefined} />;
   if (item.kind === "cutline") return <CutLine below={item.below} />;
   return <NeedRow n={item.need} showCluster={showCluster} onSelect={onSelect} />;
 }
@@ -455,9 +460,14 @@ function DecisionReport({ need, all, onClose }: { need: NeedView | null; all: Ne
             <DemandShape n={need} />
           </Section>
 
-          {/* the decision trace */}
-          <Section title="Decision trace" hint="how the engine walked it">
-            <PhaseWaterfall n={need} />
+          {/* the decision trace — a "held" panel when satisfied, the
+              acquire→preempt waterfall when unmet (where the per-cycle steps
+              carry signal) */}
+          <Section
+            title={need.satisfied ? "How it's held" : "Decision trace"}
+            hint={need.satisfied ? "standing state, re-derived this cycle" : "how the engine walked it"}
+          >
+            <DecisionTrace n={need} />
           </Section>
 
           {/* supply funnel */}

@@ -64,7 +64,7 @@ export const REASONS: Record<string, ReasonMeta> = {
 
 export function reasonMeta(n: Pick<NeedView, "satisfied" | "unmetReason">): ReasonMeta {
   if (n.satisfied)
-    return { label: "satisfied", tone: "good", explain: "Claimed from existing or newly-provisioned supply.", action: "" };
+    return { label: "satisfied", tone: "good", explain: "Held from machines this Need already owns, re-affirmed this cycle.", action: "" };
   return (
     REASONS[n.unmetReason] ?? {
       label: (n.unmetReason || "unmet").toLowerCase().replace(/_/g, " "),
@@ -285,9 +285,49 @@ export function CoverageBar({ n, w = "w-16" }: { n: NeedView; w?: string }) {
   );
 }
 
-// ── Phase 1→2 decision waterfall ───────────────────────────────────────────
-export function PhaseWaterfall({ n }: { n: NeedView }) {
-  const p1 = n.bootstrapCount + n.provisionCount;
+// ── decision trace ─────────────────────────────────────────────────────────
+// A Need's verdict is re-derived every cycle. The fields split into STANDING
+// state (claimed_machine_count — the complete held-set this cycle, incl.
+// already-configured machines carried from prior cycles) and per-cycle DELTAS
+// (bootstrap/provision = acquired THIS cycle; preemption = only when Phase 2
+// ran). For the satisfied ~99% the deltas are 0, so a per-cycle waterfall reads
+// empty and self-contradictory ("claimed nothing → satisfied"). So we lead on
+// the standing claim for satisfied Needs and reserve the acquire→preempt
+// waterfall for the unmet case, where the per-cycle steps actually carry signal.
+// Phase 3 (reclaim) releases idle capacity at the shard level and never
+// acquires for a Need — it has no per-Need step here, by design.
+export function DecisionTrace({ n }: { n: NeedView }) {
+  return n.satisfied ? <HeldPanel n={n} /> : <UnmetWaterfall n={n} />;
+}
+
+function HeldPanel({ n }: { n: NeedView }) {
+  const acquired = n.bootstrapCount + n.provisionCount;
+  const held = n.claimedMachineCount;
+  return (
+    <div className="rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3.5 dark:border-emerald-700/30 dark:bg-emerald-950/15">
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-semibold tabular-nums text-[var(--text)]">{formatInt(held)}</span>
+        <span className="text-sm text-[var(--text-muted)]">
+          machine{held === 1 ? "" : "s"} held{acquired > 0 ? <> · <span className="text-emerald-700 dark:text-emerald-400">+{formatInt(acquired)} new this cycle</span></> : null}
+        </span>
+      </div>
+      {acquired === 0 ? (
+        <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-muted)]">
+          All already configured — carried from earlier cycles and re-affirmed this cycle with no acquisition and no preemption.
+          Holding steady with the engine quiet is BigFleet&apos;s <span className="text-[var(--text)]">static-stability</span> property.
+        </p>
+      ) : (
+        <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-muted)]">
+          {formatInt(n.bootstrapCount)} bootstrapped <span className="text-[var(--text-subtle)]">(idle → configured)</span> · {formatInt(n.provisionCount)} provisioned <span className="text-[var(--text-subtle)]">(speculative → configured)</span>
+          {held - acquired > 0 ? <> — the other {formatInt(held - acquired)} were already held.</> : "."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function UnmetWaterfall({ n }: { n: NeedView }) {
+  const acquired = n.bootstrapCount + n.provisionCount;
   const p2 = n.preemption?.victimsFound ?? 0;
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3.5 sm:flex-row sm:items-stretch">
@@ -295,15 +335,15 @@ export function PhaseWaterfall({ n }: { n: NeedView }) {
         phase="Phase 1"
         title="assign"
         body={
-          p1 > 0 ? (
+          n.claimedMachineCount > 0 ? (
             <span>
-              claimed <b className="text-[var(--text)]">{formatInt(p1)}</b> ({formatInt(n.bootstrapCount)} bootstrap · {formatInt(n.provisionCount)} provision)
+              claimed <b className="text-[var(--text)]">{formatInt(n.claimedMachineCount)}</b> machine{n.claimedMachineCount === 1 ? "" : "s"}{acquired > 0 ? ` (+${formatInt(acquired)} new)` : ""} — not enough
             </span>
           ) : (
-            <span className="text-[var(--text-subtle)]">claimed nothing from existing/idle supply</span>
+            <span className="text-[var(--text-subtle)]">claimed nothing — matching supply held above your cut-line</span>
           )
         }
-        tone={p1 > 0 ? "good" : "muted"}
+        tone={n.claimedMachineCount > 0 ? "warn" : "muted"}
       />
       <WaterfallArrow />
       <WaterfallStage
@@ -315,7 +355,7 @@ export function PhaseWaterfall({ n }: { n: NeedView }) {
               {formatInt(p2)} victim{p2 === 1 ? "" : "s"}, freed <b className="text-[var(--text)]">{formatResources(n.preemption.capacityFreed)}</b>
             </span>
           ) : (
-            <span className="text-[var(--text-subtle)]">no preemption attempted</span>
+            <span className="text-[var(--text-subtle)]">no displaceable victim of your shape</span>
           )
         }
         tone={p2 > 0 ? "warn" : "muted"}
@@ -323,15 +363,9 @@ export function PhaseWaterfall({ n }: { n: NeedView }) {
       <WaterfallArrow />
       <WaterfallStage
         phase="Verdict"
-        title={n.satisfied ? "satisfied" : "still short"}
-        body={
-          n.satisfied ? (
-            <span className="text-emerald-600 dark:text-emerald-400">✓ demand met</span>
-          ) : (
-            <span className="font-mono text-amber-700 dark:text-amber-400">{formatResources(n.residualDeficit)}</span>
-          )
-        }
-        tone={n.satisfied ? "good" : "danger"}
+        title="still short"
+        body={<span className="font-mono text-amber-700 dark:text-amber-400">{formatResources(n.residualDeficit)}</span>}
+        tone="danger"
       />
     </div>
   );
@@ -530,14 +564,14 @@ function ResourceCoverage({ n }: { n: NeedView }) {
 }
 
 // ── cohort header + cut-line (the priority walk made visible) ──────────────
-export function CohortHeader({ fingerprint, count, supply }: { fingerprint: string; count: number; supply?: { idle: number; configured: number; speculative: number; capped: boolean } }) {
+export function CohortHeader({ fingerprint, count, contested, supply }: { fingerprint: string; count: number; contested: boolean; supply?: { idle: number; configured: number; speculative: number; capped: boolean } }) {
   const total = supply ? supply.idle + supply.configured + supply.speculative : 0;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">contested shape</span>
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">{contested ? "contested shape" : "shared shape"}</span>
       <span className="font-mono text-xs text-[var(--text-muted)]" title={`aggregation profile ${fingerprint}`}>{fingerprint.slice(0, 10)}</span>
       <span className="text-[11px] text-[var(--text-subtle)]">· {formatInt(count)} need{count === 1 ? "" : "s"}</span>
-      {supply && total > 0 && (
+      {contested && supply && total > 0 && (
         <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-[var(--text-subtle)]">
           <span>pool</span>
           <span className="inline-flex h-2 w-24 overflow-hidden rounded-full bg-[var(--surface-3)]" aria-hidden>

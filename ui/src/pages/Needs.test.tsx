@@ -157,6 +157,46 @@ describe("Needs workspace", () => {
     expect(await screen.findByText(/What to do/)).toBeInTheDocument();
   });
 
+  it("shows a satisfied need as held standing state, never an empty 'claimed nothing' waterfall", async () => {
+    const stable = {
+      clusterId: "stable-svc",
+      priority: 5000,
+      aggregateResources: { cpu: "240000m" },
+      minUnit: { cpu: "8000m" },
+      profileFingerprint: "stable-fp",
+      arrivalUnixNanos: 1_700_000_000_000_000_000,
+      interruptionPenaltyBucket: "1024",
+      reclamationPenaltyBucket: "256",
+      satisfied: true,
+      claimedMachineCount: 30, // standing held-set …
+      bootstrapCount: 0, // … with zero acquisition this cycle (steady state)
+      provisionCount: 0,
+      sameSatisfiable: false,
+      acquisitionParked: false,
+      ageCyclesUnmet: 0,
+      unmetReason: "UNSPECIFIED",
+    };
+    vi.stubGlobal(
+      "fetch",
+      routeFetch({
+        "/api/config": wiredConfig,
+        "/api/topology": topology,
+        "/api/needs": { shardId: "shard-a", cycle: 9, computedAtUnixNanos: 0, totalNeeds: 1, needs: [stable], queriedAt: "" },
+      }),
+    );
+    renderWithProviders(<Needs />);
+    const pill = await screen.findByText("satisfied");
+    fireEvent.click(pill.closest("button")!);
+    // The held panel leads on the standing claim, not the per-cycle delta.
+    expect(await screen.findByText("How it's held")).toBeInTheDocument();
+    expect((await screen.findAllByText("30")).length).toBeGreaterThan(0);
+    expect(await screen.findByText(/machines? held/)).toBeInTheDocument();
+    expect(await screen.findByText(/static-stability/)).toBeInTheDocument();
+    // The buggy empty/contradictory copy must never appear for a held need.
+    expect(screen.queryByText(/claimed nothing/)).toBeNull();
+    expect(screen.queryByText("Supply funnel")).toBeNull();
+  });
+
   it("groups a contested shape into a cohort and draws the cut-line", async () => {
     const fp = "shape-fp-77";
     const claiming = {
